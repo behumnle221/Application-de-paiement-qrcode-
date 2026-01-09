@@ -437,30 +437,23 @@ class _ClientScanScreenState extends State<ClientScanScreen>
   }
 
   Widget _buildPaymentSheet() {
-  if (scannedData == null) return const SizedBox();
+    if (scannedData == null) return const SizedBox();
 
-  final products = scannedData!['products'] as List<dynamic>;
-  final total = scannedData!['total'];
+    final products = scannedData!['products'] as List<dynamic>;
+    final total = scannedData!['total'];
 
-  return Container(
-    decoration: const BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-    ),
-    padding: EdgeInsets.only(
-      left: 24,
-      right: 24,
-      top: 24,
-      bottom: MediaQuery.of(context).padding.bottom + 24, // Pour les écrans avec notch
-    ),
-    child: SingleChildScrollView( // ← LA CLÉ : tout devient scrollable !
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Indicateur de drag
-          Center(
-            child: Container(
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Indicateur de drag
+            Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
@@ -468,32 +461,37 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Icône d'avertissement
-          Center(
-            child: Container(
+            // Icône d'avertissement
+            Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.orange.withOpacity(0.3), width: 2),
+                border: Border.all(
+                  color: Colors.orange.withOpacity(0.3),
+                  width: 2,
+                ),
               ),
-              child: const Icon(Icons.warning_amber_rounded, size: 56, color: Colors.orange),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                size: 56,
+                color: Colors.orange,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          const Center(
-            child: Text(
+            const Text(
               "⚠️ Confirmer le paiement",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Container(
+            const SizedBox(height: 12),
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.1),
@@ -501,188 +499,305 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
               child: const Text(
                 "Vous êtes sur le point d'effectuer un paiement",
-                style: TextStyle(fontSize: 15, color: Colors.orange, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Détails de la commande
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF1E20CD).withOpacity(0.2), width: 2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Icon(Icons.receipt_long, color: Color(0xFF1E20CD), size: 24),
-                    SizedBox(width: 8),
-                    Text(
-                      "Détails de la commande",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
-                    ),
-                  ],
+            // Liste des produits
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF1E20CD).withOpacity(0.2),
+                  width: 2,
                 ),
-                const SizedBox(height: 16),
-                ...products.map((product) {
-                  final prix = double.parse(product['prix'].toString());
-                  final quantite = int.parse(product['quantite'].toString());
-                  final sousTotal = prix * quantite;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(product['nom'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text("$quantite × ${prix.toStringAsFixed(2)} FCFA", style: TextStyle(fontSize: 13, color: Colors.grey[600])),
-                            ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.receipt_long, color: Color(0xFF1E20CD), size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        "Détails de la commande",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ...products.map((product) {
+                    final prix = double.parse(product['prix'].toString());
+                    final quantite = int.parse(product['quantite'].toString());
+                    final sousTotal = prix * quantite;
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product['nom'],
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1F2937),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "$quantite × ${prix.toStringAsFixed(2)} FCFA",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            "${sousTotal.toStringAsFixed(2)} FCFA",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E20CD),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  const Divider(height: 24, thickness: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "TOTAL À PAYER",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E20CD),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          "$total FCFA",
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                        Text("${sousTotal.toStringAsFixed(2)} FCFA", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E20CD))),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                const Divider(height: 24, thickness: 2),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("TOTAL À PAYER", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(color: const Color(0xFF1E20CD), borderRadius: BorderRadius.circular(12)),
-                      child: Text("$total FCFA", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Numéro Mobile Money
+            const Text("Votre numéro Mobile Money", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: "Ex: 690123456",
+                prefixText: "+237 ",
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(40)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(40),
+                  borderSide: const BorderSide(color: Color(0xFF1E20CD), width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Opérateur
+            const Text("Opérateur", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text("MTN", style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: 'MTN_Cameroon',
+                    groupValue: _selectedOperator,
+                    onChanged: (value) => setState(() => _selectedOperator = value!),
+                    activeColor: const Color(0xFF1E20CD),
+                  ),
+                ),
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text("Orange", style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: 'Orange_Cameroon',
+                    groupValue: _selectedOperator,
+                    onChanged: (value) => setState(() => _selectedOperator = value!),
+                    activeColor: const Color(0xFF1E20CD),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-          // Numéro Mobile Money
-          const Text("Votre numéro Mobile Money", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              hintText: "Ex: 690123456",
-              prefixText: "+237 ",
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(40)),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(40),
-                borderSide: const BorderSide(color: Color(0xFF1E20CD), width: 2),
-              ),
+            // Boutons d'action
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!, width: 2),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          scannedData = null;
+                        });
+                      },
+                      style: TextButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                      ),
+                      child: const Text(
+                        "Annuler",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2426C0), // MÊME COULEUR
+                      borderRadius: BorderRadius.circular(40),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2426C0).withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final phone = _phoneController.text.trim();
+
+                        // Validation du numéro
+                        if (phone.isEmpty || phone.length < 9) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Veuillez entrer un numéro valide"),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        Navigator.pop(context); // Ferme la feuille de confirmation
+
+                        final transactionId = 'TRANS_${DateTime.now().millisecondsSinceEpoch}';
+
+                        try {
+                          final payToken = await AangaraaPayment.initiateNoRedirectPayment(
+                            amount: total,
+                            phoneNumber: phone,
+                            description: 'Paiement de ${products.length} article(s)',
+                            transactionId: transactionId,
+                            operator: _selectedOperator,
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Demande de paiement envoyée ! Vérifiez votre téléphone pour le PIN"),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 10),
+                            ),
+                          );
+
+                          // Paiement initié → on montre le succès
+                          _showSuccessDialog();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Erreur paiement: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.check_circle, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            "Payer",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-
-          // Opérateur
-          const Text("Opérateur", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: RadioListTile<String>(
-                  title: const Text("MTN", style: TextStyle(fontWeight: FontWeight.bold)),
-                  value: 'MTN_Cameroon',
-                  groupValue: _selectedOperator,
-                  onChanged: (value) => setState(() => _selectedOperator = value!),
-                  activeColor: const Color(0xFF1E20CD),
-                ),
-              ),
-              Expanded(
-                child: RadioListTile<String>(
-                  title: const Text("Orange", style: TextStyle(fontWeight: FontWeight.bold)),
-                  value: 'Orange_Cameroon',
-                  groupValue: _selectedOperator,
-                  onChanged: (value) => setState(() => _selectedOperator = value!),
-                  activeColor: const Color(0xFF1E20CD),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Boutons Annuler / Payer
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() => scannedData = null);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: Colors.grey[300]!, width: 2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                  ),
-                  child: const Text("Annuler", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    // Ton code de paiement (celui que tu as déjà)
-                    final phone = _phoneController.text.trim();
-                    if (phone.isEmpty || phone.length < 9) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Veuillez entrer un numéro valide"), backgroundColor: Colors.red),
-                      );
-                      return;
-                    }
-                    Navigator.pop(context);
-                    final transactionId = 'TRANS_${DateTime.now().millisecondsSinceEpoch}';
-                    try {
-                      await AangaraaPayment.initiateRedirectPayment(
-                        amount: total,
-                        description: 'Paiement de ${products.length} article(s)',
-                        transactionId: transactionId,
-                        operator: _selectedOperator,
-                      );
-                      _showSuccessDialog();
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur paiement: $e'), backgroundColor: Colors.red),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2426C0),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                    elevation: 4,
-                  ),
-                  child: const Text("Payer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
-        ],
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _showSuccessDialog() {
     showDialog(
