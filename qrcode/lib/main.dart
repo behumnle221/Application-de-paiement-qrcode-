@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qrcode/pages/client_scan_screen.dart';
 import 'package:qrcode/pages/merchant_screen.dart';
 import 'package:qrcode/pages/profile_selection_screen.dart';
+import 'package:qrcode/pages/landing_page.dart';
 import 'pages/login_screen.dart';
 import 'pages/register_screen.dart';
 
@@ -27,8 +28,9 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      initialRoute: '/login',
+      initialRoute: '/landing_page',
       routes: {
+        '/landing': (context) => const LandingPage(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/profile_selection': (context) => const ProfileSelectionScreen(),
@@ -38,11 +40,9 @@ class MyApp extends StatelessWidget {
         // '/home': (context) => const HomeScreen(),
         // '/scan': (context) => const ScanQrScreen(),
       },
-      // Si une route n'existe pas, on revient au login par défaut
+      // Si une route n'existe pas, on revient à la landing par défaut
       onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        );
+        return MaterialPageRoute(builder: (context) => const LandingPage());
       },
     );
   }
