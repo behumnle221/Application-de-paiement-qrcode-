@@ -649,7 +649,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               children: [
                 Expanded(
                   child: RadioListTile<String>(
-                    title: const Text("MTN", style: TextStyle(fontWeight: FontWeight.bold)),
+                    title: const Text("MTN", style: TextStyle(fontWeight: FontWeight.bold)),   
                     value: 'MTN_Cameroon',
                     groupValue: _selectedOperator,
                     onChanged: (value) => setState(() => _selectedOperator = value!),
