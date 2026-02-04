@@ -1,7 +1,10 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
-import 'routes/app_router.dart';
-import 'utils/constants.dart'; // Assure-toi que ce chemin est correct (../utils/constants.dart si dans un sous-dossier)
+import 'package:google_fonts/google_fonts.dart';
+import 'package:qrcode/pages/client_scan_screen.dart';
+import 'package:qrcode/pages/merchant_screen.dart';
+import 'package:qrcode/pages/profile_selection_screen.dart';
+import 'pages/login_screen.dart';
+import 'pages/register_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,20 +15,35 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
+    return MaterialApp(
+      title: 'QR Pay',
       debugShowCheckedModeBanner: false,
-      title: 'Paiement QR',
       theme: ThemeData(
-        scaffoldBackgroundColor: backgroundWhite,
-        primaryColor: primaryBlue,
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryBlue,
-            elevation: 4,
-          ),
+        useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme(),
+        primaryColor: const Color(0xFF1E20CD),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E20CD),
+          brightness: Brightness.light,
         ),
       ),
-      routerConfig: router,
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/profile_selection': (context) => const ProfileSelectionScreen(),
+        '/merchant': (context) => const MerchantScreen(),
+        '/client_scan': (context) => const ClientScanScreen(),
+        // Tu pourras ajouter les prochains écrans ici :
+        // '/home': (context) => const HomeScreen(),
+        // '/scan': (context) => const ScanQrScreen(),
+      },
+      // Si une route n'existe pas, on revient au login par défaut
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        );
+      },
     );
   }
 }
