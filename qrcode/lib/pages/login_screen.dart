@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:qrcode/services/api_service.dart';
+import 'package:qrcode/services/local_storage_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -41,39 +43,64 @@ class _LoginScreenState extends State<LoginScreen> {
     final identifier = _identifierController.text.trim();
     final password = _passwordController.text;
 
-    final users = await _loadUsers();
-
-    final user = users.firstWhere(
-      (u) =>
-          (u['email'] == identifier || u['phone'] == identifier) &&
-          u['password'] == password,
-      orElse: () => {},
+    // Loader
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    if (user.isEmpty) {
+    // Appel API
+    final result = await ApiService.login(
+      emailOrPhone: identifier,
+      password: password,
+    );
+
+    Navigator.pop(context); // Fermer le loader
+
+    if (result['success']) {
+      // Sauvegarder les données
+      await LocalStorageService.saveToken(result['token']);
+      await LocalStorageService.saveUserData(
+        userId: result['userId'],
+        email: result['email'],
+        telephone: result['telephone'],
+        nom: 'User',
+        role: result['role'],
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Identifiant ou mot de passe incorrect"),
-          backgroundColor: Colors.red,
+          content: Text('Connexion réussie ! 🎉'),
+          backgroundColor: Colors.green,
         ),
       );
-      return;
+
+      // Redirection selon le rôle
+      if (result['role'] == 'CLIENT') {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/client_scan',
+          (route) => false,
+        );
+      } else if (result['role'] == 'VENDEUR') {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/merchant',
+          (route) => false,
+        );
+      } else {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/profile_selection',
+          (route) => false,
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+      );
     }
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Connexion réussie ! Bienvenue 👋"),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/profile_selection',
-      (route) => false,
-    );
   }
 
   @override

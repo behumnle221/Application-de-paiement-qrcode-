@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qrcode/pages/role_selection_screen.dart';
+import 'package:qrcode/pages/register_client_screen.dart';
+import 'package:qrcode/pages/register_vendor_screen.dart';
 import 'package:qrcode/pages/client_scan_screen.dart';
 import 'package:qrcode/pages/merchant_screen.dart';
 import 'package:qrcode/pages/profile_selection_screen.dart';
@@ -28,10 +31,13 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      initialRoute: '/landing_page',
+      initialRoute: '/landing',
       routes: {
         '/landing': (context) => const LandingPage(),
+        '/role_selection': (context) => const RoleSelectionScreen(),
         '/login': (context) => const LoginScreen(),
+        '/register_client': (context) => const RegisterClientScreen(),
+        '/register_vendor': (context) => const RegisterVendorScreen(),
         '/register': (context) => const RegisterScreen(),
         '/profile_selection': (context) => const ProfileSelectionScreen(),
         '/merchant': (context) => const MerchantScreen(),

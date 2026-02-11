@@ -13,14 +13,14 @@ class ClientScanScreen extends StatefulWidget {
 
 class _ClientScanScreenState extends State<ClientScanScreen>
     with SingleTickerProviderStateMixin {
-  final _phoneController = TextEditingController(); // Pour numéro de téléphone
-  String _selectedOperator = 'MTN_Cameroon'; // Par défaut MTN
+  final _phoneController = TextEditingController();
+  String _selectedOperator = 'MTN_Cameroon';
   bool isScanning = false;
   MobileScannerController? cameraController;
   Map<String, dynamic>? scannedData;
   late AnimationController _animationController;
   late Animation<double> _animation;
-  bool _isLoading = false; // Pour spinner pendant appel API
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -36,7 +36,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
   void dispose() {
     _animationController.dispose();
     cameraController?.dispose();
-    _phoneController.dispose(); // Fix fuite mémoire
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -70,12 +70,14 @@ class _ClientScanScreenState extends State<ClientScanScreen>
       });
       _showPaymentConfirmation();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("QR Code invalide"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("QR Code invalide"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -90,44 +92,45 @@ class _ClientScanScreenState extends State<ClientScanScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFF0F9FF), Colors.white],
+    return WillPopScope(
+      onWillPop: () async {
+        _stopScanning();
+        return true;
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFF0F9FF), Colors.white],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(),
-
-              const SizedBox(height: 40),
-
-              // Zone de scan
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (!isScanning) ...[
-                        _buildScanPreview(),
-                        const SizedBox(height: 40),
-                        _buildScanButton(),
-                      ] else ...[
-                        _buildActiveScanner(),
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 40),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (!isScanning) ...[
+                          _buildScanPreview(),
+                          const SizedBox(height: 40),
+                          _buildScanButton(),
+                        ] else ...[
+                          _buildActiveScanner(),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 40),
-            ],
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
@@ -140,7 +143,10 @@ class _ClientScanScreenState extends State<ClientScanScreen>
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _stopScanning();
+              Navigator.pop(context);
+            },
             icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E20CD)),
           ),
           const Expanded(
@@ -176,8 +182,9 @@ class _ClientScanScreenState extends State<ClientScanScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1E20CD)
-                    .withOpacity(0.1 + (_animation.value * 0.2)),
+                color: const Color(
+                  0xFF1E20CD,
+                ).withOpacity(0.1 + (_animation.value * 0.2)),
                 blurRadius: 20 + (_animation.value * 10),
                 spreadRadius: 5,
               ),
@@ -185,10 +192,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
           ),
           child: Stack(
             children: [
-              // Coins du cadre
               ..._buildCorners(),
-
-              // Icône centrale
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -217,16 +221,11 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                     const SizedBox(height: 8),
                     Text(
                       "Appuyez sur le bouton ci-dessous",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ),
-
-              // Ligne de scan animée
               Positioned(
                 left: 20,
                 right: 20,
@@ -263,7 +262,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
     const cornerColor = Color(0xFF1E20CD);
 
     return [
-      // Coin haut gauche
       Positioned(
         top: 20,
         left: 20,
@@ -278,7 +276,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
           ),
         ),
       ),
-      // Coin haut droit
       Positioned(
         top: 20,
         right: 20,
@@ -293,7 +290,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
           ),
         ),
       ),
-      // Coin bas gauche
       Positioned(
         bottom: 20,
         left: 20,
@@ -308,7 +304,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
           ),
         ),
       ),
-      // Coin bas droit
       Positioned(
         bottom: 20,
         right: 20,
@@ -331,7 +326,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
       width: double.infinity,
       height: 64.8,
       decoration: BoxDecoration(
-        color: const Color(0xFF2426C0), // MÊME COULEUR que tes autres boutons
+        color: const Color(0xFF2426C0),
         borderRadius: BorderRadius.circular(40),
         boxShadow: [
           BoxShadow(
@@ -379,10 +374,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
             width: 320,
             height: 320,
             decoration: BoxDecoration(
-              border: Border.all(
-                color: const Color(0xFF1E20CD),
-                width: 4,
-              ),
+              border: Border.all(color: const Color(0xFF1E20CD), width: 4),
               borderRadius: BorderRadius.circular(32),
             ),
             child: Stack(
@@ -392,16 +384,12 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                   onDetect: _handleBarcode,
                 ),
                 ..._buildCorners(),
-                // Overlay semi-transparent
                 Center(
                   child: Container(
                     width: 240,
                     height: 240,
                     decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 2,
-                      ),
+                      border: Border.all(color: Colors.white, width: 2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
@@ -452,7 +440,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Indicateur de drag
             Container(
               width: 40,
               height: 4,
@@ -462,8 +449,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 24),
-
-            // Icône d'avertissement
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -481,7 +466,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 20),
-
             const Text(
               "⚠️ Confirmer le paiement",
               style: TextStyle(
@@ -508,8 +492,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 24),
-
-            // Liste des produits
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -525,7 +507,11 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                 children: [
                   Row(
                     children: const [
-                      Icon(Icons.receipt_long, color: Color(0xFF1E20CD), size: 24),
+                      Icon(
+                        Icons.receipt_long,
+                        color: Color(0xFF1E20CD),
+                        size: 24,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         "Détails de la commande",
@@ -542,7 +528,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                     final prix = double.parse(product['prix'].toString());
                     final quantite = int.parse(product['quantite'].toString());
                     final sousTotal = prix * quantite;
-                    
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(12),
@@ -601,7 +587,10 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1E20CD),
                           borderRadius: BorderRadius.circular(12),
@@ -621,9 +610,10 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 24),
-
-            // Numéro Mobile Money
-            const Text("Votre numéro Mobile Money", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              "Votre numéro Mobile Money",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _phoneController,
@@ -633,43 +623,55 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                 prefixText: "+237 ",
                 filled: true,
                 fillColor: Colors.grey[50],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(40)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(40),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(40),
-                  borderSide: const BorderSide(color: Color(0xFF1E20CD), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF1E20CD),
+                    width: 2,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-
-            // Opérateur
-            const Text("Opérateur", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              "Opérateur",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: RadioListTile<String>(
-                    title: const Text("MTN", style: TextStyle(fontWeight: FontWeight.bold)),   
+                    title: const Text(
+                      "MTN",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     value: 'MTN_Cameroon',
                     groupValue: _selectedOperator,
-                    onChanged: (value) => setState(() => _selectedOperator = value!),
+                    onChanged:
+                        (value) => setState(() => _selectedOperator = value!),
                     activeColor: const Color(0xFF1E20CD),
                   ),
                 ),
                 Expanded(
                   child: RadioListTile<String>(
-                    title: const Text("Orange", style: TextStyle(fontWeight: FontWeight.bold)),
+                    title: const Text(
+                      "Orange",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     value: 'Orange_Cameroon',
                     groupValue: _selectedOperator,
-                    onChanged: (value) => setState(() => _selectedOperator = value!),
+                    onChanged:
+                        (value) => setState(() => _selectedOperator = value!),
                     activeColor: const Color(0xFF1E20CD),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
-            // Boutons d'action
             Row(
               children: [
                 Expanded(
@@ -708,7 +710,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                   child: Container(
                     height: 56,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2426C0), // MÊME COULEUR
+                      color: const Color(0xFF2426C0),
                       borderRadius: BorderRadius.circular(40),
                       boxShadow: [
                         BoxShadow(
@@ -722,47 +724,58 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                       onPressed: () async {
                         final phone = _phoneController.text.trim();
 
-                        // Validation du numéro
                         if (phone.isEmpty || phone.length < 9) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Veuillez entrer un numéro valide"),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Veuillez entrer un numéro valide",
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                           return;
                         }
 
-                        Navigator.pop(context); // Ferme la feuille de confirmation
+                        Navigator.pop(context);
 
-                        final transactionId = 'TRANS_${DateTime.now().millisecondsSinceEpoch}';
+                        final transactionId =
+                            'TRANS_${DateTime.now().millisecondsSinceEpoch}';
 
                         try {
-                          final payToken = await AangaraaPayment.initiateNoRedirectPayment(
-                            amount: total,
-                            phoneNumber: phone,
-                            description: 'Paiement de ${products.length} article(s)',
-                            transactionId: transactionId,
-                            operator: _selectedOperator,
-                          );
+                          final payToken =
+                              await AangaraaPayment.initiateNoRedirectPayment(
+                                amount: total,
+                                phoneNumber: phone,
+                                description:
+                                    'Paiement de ${products.length} article(s)',
+                                transactionId: transactionId,
+                                operator: _selectedOperator,
+                              );
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Demande de paiement envoyée ! Vérifiez votre téléphone pour le PIN"),
-                              backgroundColor: Colors.green,
-                              duration: Duration(seconds: 10),
-                            ),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Demande de paiement envoyée ! Vérifiez votre téléphone pour le PIN",
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 10),
+                              ),
+                            );
 
-                          // Paiement initié → on montre le succès
-                          _showSuccessDialog();
+                            _showSuccessDialog();
+                          }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Erreur paiement: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur paiement: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -803,86 +816,84 @@ class _ClientScanScreenState extends State<ClientScanScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-        ),
-        contentPadding: const EdgeInsets.all(32),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF10B981),
-                  shape: BoxShape.circle,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(32),
+            ),
+            contentPadding: const EdgeInsets.all(32),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      size: 56,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.check,
-                  size: 56,
-                  color: Colors.white,
+                const SizedBox(height: 24),
+                const Text(
+                  "🎉 Paiement réussi !",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "🎉 Paiement réussi !",
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Votre transaction a été effectuée avec succès",
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 28),
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2426C0), // MÊME COULEUR
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    scannedData = null;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
+                const SizedBox(height: 12),
+                Text(
+                  "Votre transaction a été effectuée avec succès",
+                  style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2426C0),
                     borderRadius: BorderRadius.circular(40),
                   ),
-                ),
-                child: const Text(
-                  "Fermer",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {
+                        scannedData = null;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                    ),
+                    child: const Text(
+                      "Fermer",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 }

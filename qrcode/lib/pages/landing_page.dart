@@ -166,7 +166,7 @@ class LandingPage extends StatelessWidget {
                         onPressed: () {
                           Navigator.pushNamedAndRemoveUntil(
                             context,
-                            '/login',
+                            '/role_selection',
                             (route) => false,
                           );
                         },
