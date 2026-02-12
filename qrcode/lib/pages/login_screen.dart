@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (result['role'] == 'VENDEUR') {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/merchant',
+          '/merchant_dashboard',
           (route) => false,
         );
       } else {
@@ -347,7 +347,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        onTap: () => Navigator.pushNamed(context, '/register'),
+                        onTap:
+                            () =>
+                                Navigator.pushNamed(context, '/role_selection'),
                         child: Center(
                           child: Text(
                             "Créer un compte",
