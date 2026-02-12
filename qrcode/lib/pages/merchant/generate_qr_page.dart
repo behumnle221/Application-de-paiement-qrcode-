@@ -8,7 +8,7 @@ class GenerateQRPage extends StatefulWidget {
 
   @override
   State<GenerateQRPage> createState() => _GenerateQRPageState();
-}       //ok
+}
 
 class _GenerateQRPageState extends State<GenerateQRPage> {
   List<Map<String, dynamic>> products = [
@@ -68,7 +68,7 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
   }
 
   Future<void> generateQRCode() async {
-    // ✅ CORRIGÉ : Validation complète avec vérification des valeurs numériques
+    // ✅ VALIDATION : Au moins un produit complet
     final hasAtLeastOneProduct = products.any(
       (p) =>
           p['nom'].toString().trim().isNotEmpty &&
@@ -85,7 +85,7 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Veuillez remplir au moins un produit complet avec des valeurs numériques valides (nom, prix > 0, quantité > 0)',
+              'Veuillez remplir au moins un produit complet avec des valeurs numériques valides',
             ),
             backgroundColor: Colors.red,
           ),
@@ -95,7 +95,8 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
     }
 
     final total = calculateTotal();
-    // ✅ CORRIGÉ : Filtre et formate correctement les produits
+
+    // ✅ FILTRER LES PRODUITS VALIDES
     final validProducts =
         products
             .where(
@@ -117,27 +118,35 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
             )
             .toList();
 
+    // ✅ CONSTRUIRE LA DESCRIPTION AVEC LES NOMS DES PRODUITS
+    // Format : "Produit1, Produit2, Produit3"
+    final productNames = validProducts.map((p) => p['nom']).toList();
+    final descriptionFromProducts = productNames.join(', ');
+
     setState(() => _isLoading = true);
 
-    // Appel API pour générer le QR code
+    // ✅ APPEL API AVEC :
+    // - montant : TOTAL des prix
+    // - description : NOMS des produits
+    // ✅ SANS le paramètre 'products'
     final result = await QRCodeService.generateQRCode(
       montant: total,
-      description:
-          'Paiement de ${validProducts.length} article(s) pour un montant total de $total FCFA',
-      products: validProducts,
+      description: descriptionFromProducts,
     );
 
     setState(() => _isLoading = false);
 
     if (mounted) {
       if (result['success']) {
-        // Générer les données du QR localement aussi pour l'affichage
+        // ✅ GÉNÉRER LES DONNÉES DU QR LOCALEMENT POUR L'AFFICHAGE
         final qrPayload = {
           'products': validProducts,
           'total': total.toStringAsFixed(2),
           'timestamp': DateTime.now().toIso8601String(),
           'merchant': 'FAPSHI',
           'qrId': result['qrId'] ?? '',
+          'contenu': result['contenu'] ?? '',
+          'description': descriptionFromProducts,
         };
 
         setState(() {

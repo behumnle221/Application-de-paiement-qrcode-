@@ -6,7 +6,7 @@ import '../models/vendor_models.dart';
 import 'local_storage_service.dart';
 
 class VendorService {
-  static const String baseUrl = 'http://10.0.2.2:8080/api/vendeur';
+  static const String baseUrl = 'http://192.168.1.144:8080/api/vendeur';
 
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await LocalStorageService.getToken();
