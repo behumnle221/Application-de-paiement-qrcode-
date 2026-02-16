@@ -11,6 +11,8 @@ class ClientScanScreen extends StatefulWidget {
   State<ClientScanScreen> createState() => _ClientScanScreenState();
 }
 
+//boomb
+
 class _ClientScanScreenState extends State<ClientScanScreen>
     with SingleTickerProviderStateMixin {
   final _phoneController = TextEditingController();
