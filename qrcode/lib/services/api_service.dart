@@ -7,7 +7,7 @@ import '../models/api_models.dart';
 class ApiService {
   // ⚠️ À ADAPTER selon votre environnement
   static const String baseUrl =
-      'http://192.168.1.144:8080/api'; // address de mon pc
+      'http://192.168.1.101:8080/api'; // address de mon pc
   // Pour vrai téléphone : 'http://192.168.X.X:8080/api'  (remplacer X.X par l'IP de votre PC)
   // Pour localhost : 'http://localhost:8080/api'
 
@@ -237,37 +237,55 @@ class ApiService {
   // QR CODE ENDPOINTS (BONUS)
   // ==========================================
 
+   // ==========================================
+  // GÉNÉRATION QR CODE (nouvelle version)
+  // ==========================================
   static Future<Map<String, dynamic>> generateQrCode({
     required String token,
-    required double montant,
-    required String description,
-    String? dateExpiration,
+    required List<Map<String, dynamic>> products,   // liste des produits
+    String description = "Panier client",
+    Duration expiration = const Duration(hours: 2), // par défaut 2h
   }) async {
     try {
+      final dateExpiration = DateTime.now().add(expiration).toIso8601String();
+
       final response = await http.post(
         Uri.parse('$baseUrl/qr/generate'),
         headers: _getHeaders(token: token),
         body: jsonEncode({
-          'montant': montant,
+          'products': products,
           'description': description,
           'dateExpiration': dateExpiration,
         }),
       );
 
+      print('=== QR Generate Request ===');
+      print('URL: $baseUrl/qr/generate');
+      print('Status: ${response.statusCode}');
+      print('Response: ${response.body}');
+      print('===========================');
+
       if (response.statusCode == 201) {
         final jsonResponse = jsonDecode(response.body);
-        return {'success': true, 'data': jsonResponse['data']};
+        final qrPayload = jsonResponse['data']['qrPayload'];   // ← c’est ce qu’on veut !
+
+        return {
+          'success': true,
+          'qrPayload': qrPayload,
+          'data': jsonResponse['data'],
+        };
       } else {
+        final jsonResponse = jsonDecode(response.body);
         return {
           'success': false,
-          'message': 'Erreur lors de la génération du QR',
+          'message': jsonResponse['message'] ?? 'Erreur lors de la génération du QR',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Erreur: $e'};
+      print('EXCEPTION in generateQrCode: $e');
+      return {'success': false, 'message': 'Erreur de connexion: $e'};
     }
   }
-
   static Future<Map<String, dynamic>> validateQrCode({
     required int qrCodeId,
   }) async {
@@ -284,7 +302,8 @@ class ApiService {
         return {'success': false, 'message': 'QR Code invalide'};
       }
     } catch (e) {
+      
       return {'success': false, 'message': 'Erreur: $e'};
     }
-  }
+  } 
 }

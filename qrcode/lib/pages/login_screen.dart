@@ -37,70 +37,118 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _login() async {
+    Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     final identifier = _identifierController.text.trim();
     final password = _passwordController.text;
 
-    // Loader
+    print('══════════════════════════════════════════════════════════════');
+    print('🔐 TENTATIVE DE CONNEXION');
+    print('📧 Identifiant : $identifier');
+    print('⏱️  Heure : ${DateTime.now()}');
+    print('══════════════════════════════════════════════════════════════');
+
+    // Affichage du loader
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Appel API
-    final result = await ApiService.login(
-      emailOrPhone: identifier,
-      password: password,
-    );
-
-    Navigator.pop(context); // Fermer le loader
-
-    if (result['success']) {
-      // Sauvegarder les données
-      await LocalStorageService.saveToken(result['token']);
-      await LocalStorageService.saveUserData(
-        userId: result['userId'],
-        email: result['email'],
-        telephone: result['telephone'],
-        nom: 'User',
-        role: result['role'],
+    try {
+      final result = await ApiService.login(
+        emailOrPhone: identifier,
+        password: password,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connexion réussie ! 🎉'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      Navigator.pop(context); // Fermer le loader
 
-      // Redirection selon le rôle
-      if (result['role'] == 'CLIENT') {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/client_scan',
-          (route) => false,
+      // ==================== LOGS DÉTAILLÉS ====================
+      if (result['success'] == true) {
+        final token = result['token'];
+        print('✅ CONNEXION RÉUSSIE !');
+        print('👤 Rôle : ${result['role']}');
+        print('🆔 User ID : ${result['userId']}');
+        print('🔑 Token : ${token.substring(0, token.length > 40 ? 40 : token.length)}...');
+        print('══════════════════════════════════════════════════════════════');
+
+        // Sauvegarde des données
+        await LocalStorageService.saveToken(token);
+        await LocalStorageService.saveUserData(
+          userId: result['userId'],
+          email: result['email'],
+          telephone: result['telephone'],
+          nom: result['nom'] ?? 'User',
+          role: result['role'],
         );
-      } else if (result['role'] == 'VENDEUR') {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/merchant',
-          (route) => false,
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connexion réussie ! ✅'),
+            backgroundColor: Colors.green,
+          ),
         );
-      } else {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/profile_selection',
-          (route) => false,
+
+        // Navigation selon rôle
+        if (result['role'] == 'VENDEUR') {
+          Navigator.pushNamedAndRemoveUntil(context, '/merchant', (route) => false);
+        } else if (result['role'] == 'CLIENT') {
+          Navigator.pushNamedAndRemoveUntil(context, '/client_scan', (route) => false);
+        } else {
+          Navigator.pushNamedAndRemoveUntil(context, '/profile_selection', (route) => false);
+        }
+      } 
+      // ==================== ERREUR D'AUTHENTIFICATION ====================
+      else {
+        print('❌ ÉCHEC DE CONNEXION');
+        print('Message : ${result['message']}');
+        print('══════════════════════════════════════════════════════════════');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Identifiants incorrects'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
-    } else {
+    } 
+    // ==================== ERREURS RÉSEAU & SERVEUR ====================
+    catch (e) {
+      Navigator.pop(context); // Fermer le loader
+
+      print('🚨 ERREUR CRITIQUE LORS DE LA CONNEXION');
+      
+      if (e is SocketException) {
+        print('⚠️  ERREUR RÉSEAU : Impossible de se connecter au serveur');
+        print('💡 Vérifiez : Backend allumé ? Ngrok actif ? URL correcte ?');
+      } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        print('⏱️  TIMEOUT : Le serveur ne répond pas (trop lent ou hors ligne)');
+      } else {
+        print('Erreur inconnue : $e');
+      }
+      print('══════════════════════════════════════════════════════════════');
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(_getUserFriendlyError(e)),
+          backgroundColor: Colors.red[700],
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
+  }
+
+  // Message plus compréhensible pour l'utilisateur
+  String _getUserFriendlyError(dynamic error) {
+    if (error is SocketException) {
+      return "Impossible de se connecter au serveur.\nVérifiez votre connexion internet ou si le backend est démarré.";
+    }
+    if (error.toString().contains('timeout')) {
+      return "Le serveur met trop de temps à répondre. Réessayez.";
+    }
+    return "Erreur de connexion. Veuillez réessayer.";
   }
 
   @override
@@ -223,51 +271,45 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Remember Me avec style moderne
-                      GestureDetector(
-                        onTap: () {
-                          setState(() => rememberMe = !rememberMe);
-                        },
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color:
-                                    rememberMe
-                                        ? primaryColor
-                                        : Colors.transparent,
-                                border: Border.all(
-                                  color:
-                                      rememberMe ? primaryColor : borderColor,
-                                  width: 2,
+                      // Remember Me with constrained width to avoid overflow
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => rememberMe = !rememberMe);
+                          },
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: rememberMe ? primaryColor : Colors.transparent,
+                                  border: Border.all(
+                                    color: rememberMe ? primaryColor : borderColor,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                borderRadius: BorderRadius.circular(6),
+                                child: rememberMe
+                                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                    : null,
                               ),
-                              child:
-                                  rememberMe
-                                      ? const Icon(
-                                        Icons.check,
-                                        size: 14,
-                                        color: Colors.white,
-                                      )
-                                      : null,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              "Se souvenir de moi",
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
-                                color: textDarkColor,
-                                fontWeight: FontWeight.w600,
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  "Se souvenir de moi",
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: textDarkColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                      // Forgot Password avec style clickable
+                      // Forgot Password (keeps its natural size)
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -279,9 +321,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         child: Text(
                           "Mot de passe oublié?",
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: primaryColor,
                             fontWeight: FontWeight.w600,
                           ),
