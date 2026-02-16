@@ -14,6 +14,7 @@ import 'package:qrcode/pages/profile_selection_screen.dart';
 import 'package:qrcode/pages/landing_page.dart';
 import 'pages/login_screen.dart';
 import 'pages/register_screen.dart';
+import 'package:qrcode/pages/merchant_dashboard.dart';
 
 // Import du nouvel Onboarding
 import 'package:qrcode/pages/onboarding_page.dart';
@@ -58,7 +59,9 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/profile_selection': (context) => const ProfileSelectionScreen(),
         '/merchant': (context) => const MerchantScreen(),
+        '/merchant_dashboard': (context) => const MerchantDashboard(),
         '/client_scan': (context) => const ClientScanScreen(),
+
       },
 
       // Route par défaut si la route n'existe pas

@@ -83,13 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
           role: result['role'],
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connexion réussie ! ✅'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
+       
         // Navigation selon rôle
         if (result['role'] == 'VENDEUR') {
           Navigator.pushNamedAndRemoveUntil(context, '/merchant', (route) => false);
@@ -387,7 +381,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        onTap: () => Navigator.pushNamed(context, '/register'),
+                        onTap:
+                            () =>
+                                Navigator.pushNamed(context, '/role_selection'),
                         child: Center(
                           child: Text(
                             "Créer un compte",
