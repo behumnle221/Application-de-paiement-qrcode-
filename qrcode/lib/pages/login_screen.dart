@@ -182,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   _buildPremiumTextField(
                     controller: _identifierController,
                     label: "Email ou numéro",
-                    hint: "exemple@email.com ou +33612345678",
+                    hint: "email@email.com ou +23700000000",
                     icon: Icons.mail_outline_rounded,
                     primaryColor: primaryColor,
                     validator: (value) {

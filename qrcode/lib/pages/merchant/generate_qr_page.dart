@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // pour Clipboard
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:qrcode/services/qr_code_service.dart';
 
@@ -21,7 +22,6 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
   double totalAmount = 0;
   bool _isLoading = false;
 
-  // Live Total (se met à jour automatiquement)
   double get currentTotal {
     double total = 0;
     for (var p in products) {
@@ -66,16 +66,14 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                   p['nom'].toString().trim().isNotEmpty &&
                   p['prix'].toString().trim().isNotEmpty &&
                   p['quantite'].toString().trim().isNotEmpty &&
-                  double.tryParse(p['prix'].toString()) != null &&
-                  int.tryParse(p['quantite'].toString()) != null &&
-                  double.tryParse(p['prix'].toString())! > 0 &&
-                  int.tryParse(p['quantite'].toString())! > 0,
+                  (double.tryParse(p['prix'].toString()) ?? 0) > 0 &&
+                  (int.tryParse(p['quantite'].toString()) ?? 0) > 0,
             )
             .map(
               (p) => {
                 'nom': p['nom'].toString().trim(),
-                'prix': double.tryParse(p['prix'].toString()) ?? 0.0,
-                'quantite': int.tryParse(p['quantite'].toString()) ?? 0,
+                'prix': double.parse(p['prix'].toString()),
+                'quantite': int.parse(p['quantite'].toString()),
               },
             )
             .toList();
@@ -83,7 +81,7 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
     if (validProducts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ajoutez au moins un produit complet'),
+          content: Text('Ajoutez au moins un produit valide'),
           backgroundColor: Colors.red,
         ),
       );
@@ -94,29 +92,28 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
 
     final result = await QRCodeService.generateQRCode(
       products: validProducts,
-      description: "Panier client",
+      description: "Panier client - ${validProducts.length} article(s)",
     );
 
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
       setState(() {
-        qrData = result['qrPayload'];
+        qrData = result['qrPayload'] ?? '';
         qrId = result['qrId'] ?? '';
-        showQR = true;
         totalAmount = currentTotal;
+        showQR = true;
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('QR Code généré avec succès ! ✅'),
+          content: Text('QR Code généré avec succès !'),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Erreur'),
+          content: Text(result['message'] ?? 'Erreur inconnue'),
           backgroundColor: Colors.red,
         ),
       );
@@ -134,6 +131,18 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
     });
   }
 
+  void _copyQrId() {
+    if (qrId.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: qrId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ID copié !'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,39 +152,29 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        // ← TOUTE LA PAGE EST SCROLLABLE
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ==================== ÉCRAN FORMULAIRE ====================
             if (!showQR) ...[
-              const Icon(Icons.qr_code, size: 64, color: Color(0xFF1E20CD)),
+              const Icon(
+                Icons.qr_code_2_rounded,
+                size: 80,
+                color: Color(0xFF1E20CD),
+              ),
               const SizedBox(height: 16),
               const Text(
-                'Générer un QR Code',
+                'Créer un QR de paiement',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Ajoutez vos produits',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
 
-              // Liste des produits
-              ...products.map(
-                (product) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Container(
+              ...products.map((product) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF1E20CD).withOpacity(0.2),
-                        width: 2,
-                      ),
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -185,7 +184,6 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                             Text(
                               'Produit ${products.indexOf(product) + 1}',
                               style: const TextStyle(
-                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -199,7 +197,7 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TextField(
                           decoration: const InputDecoration(
                             labelText: 'Nom du produit',
@@ -213,7 +211,7 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                             Expanded(
                               child: TextField(
                                 decoration: const InputDecoration(
-                                  labelText: 'Prix unitaire',
+                                  labelText: 'Prix (FCFA)',
                                 ),
                                 keyboardType: TextInputType.number,
                                 onChanged:
@@ -241,36 +239,30 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                       ],
                     ),
                   ),
-                ),
-              ),
+                );
+              }),
 
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
                 onPressed: addProduct,
                 icon: const Icon(Icons.add),
                 label: const Text('Ajouter un produit'),
               ),
 
               const SizedBox(height: 24),
-
-              // Live Total
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF1E20CD).withOpacity(0.3),
-                    width: 2,
-                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Montant total',
+                      'Total à payer',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -286,9 +278,7 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                 ),
               ),
 
-              const SizedBox(height: 40),
-
-              // Bouton Générer
+              const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: _isLoading ? null : generateQRCode,
                 icon:
@@ -298,86 +288,75 @@ class _GenerateQRPageState extends State<GenerateQRPage> {
                           height: 24,
                           child: CircularProgressIndicator(color: Colors.white),
                         )
-                        : const Icon(Icons.qr_code),
-                label: Text(
-                  _isLoading ? 'Génération...' : 'Générer le QR Code',
-                ),
+                        : const Icon(Icons.qr_code_scanner),
+                label: Text(_isLoading ? 'Génération...' : 'Générer QR Code'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E20CD),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 64),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
-            ]
-            // ==================== ÉCRAN QR CODE (scrollable) ====================
-            else ...[
-              const Icon(Icons.qr_code, size: 64, color: Color(0xFF1E20CD)),
+            ] else ...[
+              const Icon(Icons.check_circle, size: 80, color: Colors.green),
               const SizedBox(height: 16),
               const Text(
-                'QR Code Généré',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                'QR Code prêt !',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Prêt à être scanné',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-
               const SizedBox(height: 32),
 
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF1E20CD).withOpacity(0.2),
-                    width: 2,
-                  ),
                 ),
-                child: Column(
-                  children: [
-                    QrImageView(
-                      data: qrData,
-                      version: QrVersions.auto,
-                      size: 260,
-                      backgroundColor: Colors.white,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '${totalAmount.toStringAsFixed(0)} FCFA',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E20CD),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      QrImageView(
+                        data: qrData,
+                        version: QrVersions.auto,
+                        size: 260,
+                        backgroundColor: Colors.white,
                       ),
-                    ),
-                    if (qrId.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 24),
                       Text(
-                        'ID : $qrId',
+                        '${totalAmount.toStringAsFixed(0)} FCFA',
                         style: const TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E20CD),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'ID : $qrId',
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 131, 204, 167),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 20),
+                            onPressed: _copyQrId,
+                          ),
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 50),
-
-              ElevatedButton(
+              const SizedBox(height: 40),
+              ElevatedButton.icon(
                 onPressed: resetForm,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Nouvelle génération'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E20CD),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 56),
-                ),
-                child: const Text(
-                  'Nouvelle Transaction',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  backgroundColor: const Color.fromARGB(255, 44, 46, 141),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
             ],
