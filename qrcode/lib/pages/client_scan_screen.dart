@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
-
-import 'package:qrcode/api/aangaraa_payment.dart';
+import 'package:qrcode/services/local_storage_service.dart';
+import 'package:http/http.dart' as http;
 
 class ClientScanScreen extends StatefulWidget {
   const ClientScanScreen({super.key});
@@ -21,6 +21,10 @@ class _ClientScanScreenState extends State<ClientScanScreen>
   late AnimationController _animationController;
   late Animation<double> _animation;
   bool _isLoading = false;
+
+  // Ton URL actuelle
+  static const String backendUrl =
+      'http://192.168.1.144:8080/api/payments/initiate';
 
   @override
   void initState() {
@@ -63,7 +67,14 @@ class _ClientScanScreenState extends State<ClientScanScreen>
     if (code == null) return;
 
     try {
-      final data = json.decode(code);
+      final data = json.decode(code) as Map<String, dynamic>;
+
+      if (!data.containsKey('qrCodeId') ||
+          !data.containsKey('products') ||
+          !data.containsKey('total')) {
+        throw Exception("QR Code incomplet");
+      }
+
       _stopScanning();
       setState(() {
         scannedData = data;
@@ -72,8 +83,8 @@ class _ClientScanScreenState extends State<ClientScanScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("QR Code invalide"),
+          SnackBar(
+            content: Text("QR Code invalide : ${e.toString()}"),
             backgroundColor: Colors.red,
           ),
         );
@@ -672,139 +683,185 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ],
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!, width: 2),
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        setState(() {
-                          scannedData = null;
-                        });
-                      },
-                      style: TextButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
+
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!, width: 2),
+                        borderRadius: BorderRadius.circular(40),
                       ),
-                      child: const Text(
-                        "Annuler",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          setState(() {
+                            scannedData = null;
+                          });
+                        },
+                        style: TextButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                        ),
+                        child: const Text(
+                          "Annuler",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2426C0),
-                      borderRadius: BorderRadius.circular(40),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2426C0).withOpacity(0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final phone = _phoneController.text.trim();
-
-                        if (phone.isEmpty || phone.length < 9) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Veuillez entrer un numéro valide",
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                          return;
-                        }
-
-                        Navigator.pop(context);
-
-                        final transactionId =
-                            'TRANS_${DateTime.now().millisecondsSinceEpoch}';
-
-                        try {
-                          final payToken =
-                              await AangaraaPayment.initiateNoRedirectPayment(
-                                amount: total,
-                                phoneNumber: phone,
-                                description:
-                                    'Paiement de ${products.length} article(s)',
-                                transactionId: transactionId,
-                                operator: _selectedOperator,
-                              );
-
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Demande de paiement envoyée ! Vérifiez votre téléphone pour le PIN",
-                                ),
-                                backgroundColor: Colors.green,
-                                duration: Duration(seconds: 10),
-                              ),
-                            );
-
-                            _showSuccessDialog();
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Erreur paiement: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.check_circle, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            "Payer",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2426C0),
+                        borderRadius: BorderRadius.circular(40),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2426C0).withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          print("=== BOUTON PAYER CLIQUE ===");
+
+                          final phone = _phoneController.text.trim();
+                          if (phone.isEmpty || phone.length < 9) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Numéro invalide"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Récupération du token JWT
+                          final token = await LocalStorageService.getToken();
+                          print(
+                            "Token JWT récupéré : ${token != null ? 'présent' : 'ABSENT'}",
+                          );
+
+                          if (token == null || token.isEmpty) {
+                            print("Utilisateur non connecté");
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Veuillez vous connecter d'abord",
+                                ),
+                                backgroundColor: Colors.orange,
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                            // Option : rediriger vers login
+                            Navigator.pushNamed(context, '/login');
+                            return;
+                          }
+
+                          setState(() => _isLoading = true);
+
+                          try {
+                            final response = await http.post(
+                              Uri.parse(backendUrl),
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization':
+                                    'Bearer $token', // ← LIGNE AJOUTÉE ICI
+                              },
+                              body: json.encode({
+                                'qrCodeId': scannedData!['qrCodeId'],
+                                'telephoneClient': phone,
+                                'operator': _selectedOperator,
+                                'montant': total.toString(),
+                                'directPayment': true,
+                              }),
+                            );
+
+                            print("Statut réponse : ${response.statusCode}");
+                            print("Réponse serveur : ${response.body}");
+
+                            if (response.statusCode == 200) {
+                              final resData = json.decode(response.body);
+                              if (resData['success'] == true) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      resData['message'] ??
+                                          "Demande de paiement envoyée ! Vérifiez votre téléphone.",
+                                    ),
+                                    backgroundColor: Colors.green,
+                                    duration: const Duration(seconds: 8),
+                                  ),
+                                );
+                                Navigator.pop(context);
+                                _showInitiatedDialog();
+                              } else {
+                                throw Exception(
+                                  resData['message'] ?? 'Erreur serveur',
+                                );
+                              }
+                            } else {
+                              throw Exception(
+                                'Erreur ${response.statusCode} – ${response.body}',
+                              );
+                            }
+                          } catch (e) {
+                            print("Erreur complète : $e");
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Erreur paiement : $e"),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isLoading = false);
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.check_circle, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              "Payer",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         ),
@@ -812,7 +869,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
     );
   }
 
-  void _showSuccessDialog() {
+  void _showInitiatedDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
