@@ -611,12 +611,14 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _emailController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  int _currentStep = 0; // 0: Email, 1: Code, 2: New Password
-
   final _codeController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  final _formKey = GlobalKey<FormState>();
+  int _currentStep = 0; // 0: Email → 1: Code → 2: Nouveau mot de passe
+
+  bool _isLoading = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
 
@@ -629,91 +631,65 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
-  void _handleResetStep() {
+  Future<void> _handleNextStep() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      if (_currentStep < 2) {
-        _currentStep++;
-      } else {
-        // Dernier step: reset password complété
-        _showSuccessDialog();
-      }
-    });
-  }
+    setState(() => _isLoading = true);
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.check_circle_rounded,
-                      color: Color(0xFF10B981),
-                      size: 50,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  "Mot de passe réinitialisé",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.",
-                  style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context); // Fermer dialog
-                      Navigator.pop(context); // Retour au login
-                    },
-                    child: const Text(
-                      "Retour à la connexion",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    if (_currentStep == 0) {
+      // Étape 1 : Demander le code par email
+      final result = await ApiService.forgotPassword(
+        _emailController.text.trim(),
+      );
+
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: result['success'] ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+
+      if (result['success']) {
+        setState(() => _currentStep = 1);
+      }
+    } else if (_currentStep == 1) {
+      // Étape 2 : Vérifier le code (on passe directement à l’étape 3)
+      if (_codeController.text.trim().length != 6) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Le code doit contenir 6 chiffres"),
+            backgroundColor: Colors.red,
           ),
-    );
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+      setState(() => _currentStep = 2);
+    } else if (_currentStep == 2) {
+      // Étape 3 : Changer le mot de passe
+      final result = await ApiService.resetPassword(
+        code: _codeController.text.trim(),
+        newPassword: _newPasswordController.text,
+      );
+
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: result['success'] ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+
+      if (result['success']) {
+        // Succès → retour à l'écran de login
+        Navigator.pop(context);
+      }
+    }
   }
 
   @override
@@ -745,42 +721,44 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  // Progress indicator
-                  _buildProgressIndicator(_currentStep),
-                  const SizedBox(height: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Progress indicator
+                _buildProgressIndicator(_currentStep),
+                const SizedBox(height: 40),
 
-                  // Contenu dynamique selon l'étape
-                  if (_currentStep == 0)
-                    _buildEmailStep(
-                      primaryColor,
-                      textDarkColor,
-                      textLightColor,
-                      borderColor,
-                    )
-                  else if (_currentStep == 1)
-                    _buildCodeStep(
-                      primaryColor,
-                      textDarkColor,
-                      textLightColor,
-                      borderColor,
-                    )
-                  else
-                    _buildPasswordStep(
-                      primaryColor,
-                      textDarkColor,
-                      textLightColor,
-                      borderColor,
-                    ),
+                // Contenu dynamique selon l’étape
+                if (_currentStep == 0)
+                  _buildEmailStep(
+                    primaryColor,
+                    textDarkColor,
+                    textLightColor,
+                    borderColor,
+                  )
+                else if (_currentStep == 1)
+                  _buildCodeStep(
+                    primaryColor,
+                    textDarkColor,
+                    textLightColor,
+                    borderColor,
+                  )
+                else
+                  _buildPasswordStep(
+                    primaryColor,
+                    textDarkColor,
+                    textLightColor,
+                    borderColor,
+                  ),
 
-                  const SizedBox(height: 40),
+                const SizedBox(height: 40),
 
-                  // Bouton suivant
+                // Bouton suivant / Réinitialiser
+                if (_isLoading)
+                  const CircularProgressIndicator()
+                else
                   Container(
                     width: double.infinity,
                     height: 56,
@@ -800,7 +778,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: _handleResetStep,
+                      onPressed: _handleNextStep,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -809,18 +787,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                       ),
                       child: Text(
-                        _currentStep == 2 ? "Réinitialiser" : "Continuer",
+                        _currentStep == 0
+                            ? "Envoyer le code"
+                            : _currentStep == 1
+                            ? "Vérifier le code"
+                            : "Réinitialiser le mot de passe",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ),
@@ -952,14 +932,27 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           primaryColor: primaryColor,
           validator: (value) {
             if (value == null || value.isEmpty) return "Code requis";
-            if (value.length != 6) return "Le code doit avoir 6 chiffres";
+            if (value.length != 6)
+              return "Le code doit contenir exactement 6 chiffres";
             return null;
           },
         ),
         const SizedBox(height: 20),
         Center(
           child: GestureDetector(
-            onTap: () {},
+            onTap: () async {
+              // Option : renvoyer le code
+              final result = await ApiService.forgotPassword(
+                _emailController.text.trim(),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message']),
+                  backgroundColor:
+                      result['success'] ? Colors.green : Colors.orange,
+                ),
+              );
+            },
             child: Text(
               "Renvoyer le code",
               style: TextStyle(
@@ -1006,9 +999,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           label: "Nouveau mot de passe",
           primaryColor: primaryColor,
           showPassword: _showNewPassword,
-          onToggle: () {
-            setState(() => _showNewPassword = !_showNewPassword);
-          },
+          onToggle: () => setState(() => _showNewPassword = !_showNewPassword),
           validator: (value) {
             if (value == null || value.isEmpty) return "Mot de passe requis";
             if (value.length < 8) return "Minimum 8 caractères";
@@ -1021,9 +1012,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           label: "Confirmer le mot de passe",
           primaryColor: primaryColor,
           showPassword: _showConfirmPassword,
-          onToggle: () {
-            setState(() => _showConfirmPassword = !_showConfirmPassword);
-          },
+          onToggle:
+              () =>
+                  setState(() => _showConfirmPassword = !_showConfirmPassword),
           validator: (value) {
             if (value != _newPasswordController.text) {
               return "Les mots de passe ne correspondent pas";

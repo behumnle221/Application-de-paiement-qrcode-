@@ -4,7 +4,7 @@ import 'local_storage_service.dart';
 
 class QRCodeService {
   static const String baseUrl =
-      'http://192.168.1.144:8080/api/qr'; // ← change si besoin
+      'https://backend-qr-code-u2kx.onrender.com/api/qr';
 
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await LocalStorageService.getToken();

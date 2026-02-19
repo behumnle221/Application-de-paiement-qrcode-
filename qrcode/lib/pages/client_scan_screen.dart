@@ -24,7 +24,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
 
   // Ton URL actuelle
   static const String backendUrl =
-      'http://192.168.1.144:8080/api/payments/initiate';
+      'https://backend-qr-code-u2kx.onrender.com/api/payments/initiate';
 
   @override
   void initState() {
@@ -622,7 +622,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
             ),
             const SizedBox(height: 24),
             const Text(
-              "Votre numéro Mobile Money",
+              "Votre numéro ",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -630,7 +630,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                hintText: "Ex: 690123456",
+                hintText: " :00000000",
                 prefixText: "+237 ",
                 filled: true,
                 fillColor: Colors.grey[50],
@@ -735,127 +735,138 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                           ),
                         ],
                       ),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          print("=== BOUTON PAYER CLIQUE ===");
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(40),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(40),
+                          splashColor: Colors.white.withOpacity(0.4),
+                          highlightColor: Colors.white.withOpacity(0.2),
+                          splashFactory: InkRipple.splashFactory,
+                          onTap: () async {
+                            print("=== BOUTON PAYER TOUCHÉ ===");
 
-                          final phone = _phoneController.text.trim();
-                          if (phone.isEmpty || phone.length < 9) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Numéro invalide"),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          // Récupération du token JWT
-                          final token = await LocalStorageService.getToken();
-                          print(
-                            "Token JWT récupéré : ${token != null ? 'présent' : 'ABSENT'}",
-                          );
-
-                          if (token == null || token.isEmpty) {
-                            print("Utilisateur non connecté");
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Veuillez vous connecter d'abord",
-                                ),
-                                backgroundColor: Colors.orange,
-                                duration: Duration(seconds: 4),
-                              ),
-                            );
-                            // Option : rediriger vers login
-                            Navigator.pushNamed(context, '/login');
-                            return;
-                          }
-
-                          setState(() => _isLoading = true);
-
-                          try {
-                            final response = await http.post(
-                              Uri.parse(backendUrl),
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization':
-                                    'Bearer $token', // ← LIGNE AJOUTÉE ICI
-                              },
-                              body: json.encode({
-                                'qrCodeId': scannedData!['qrCodeId'],
-                                'telephoneClient': phone,
-                                'operator': _selectedOperator,
-                                'montant': total.toString(),
-                                'directPayment': true,
-                              }),
-                            );
-
-                            print("Statut réponse : ${response.statusCode}");
-                            print("Réponse serveur : ${response.body}");
-
-                            if (response.statusCode == 200) {
-                              final resData = json.decode(response.body);
-                              if (resData['success'] == true) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      resData['message'] ??
-                                          "Demande de paiement envoyée ! Vérifiez votre téléphone.",
-                                    ),
-                                    backgroundColor: Colors.green,
-                                    duration: const Duration(seconds: 8),
-                                  ),
-                                );
-                                Navigator.pop(context);
-                                _showInitiatedDialog();
-                              } else {
-                                throw Exception(
-                                  resData['message'] ?? 'Erreur serveur',
-                                );
-                              }
-                            } else {
-                              throw Exception(
-                                'Erreur ${response.statusCode} – ${response.body}',
-                              );
-                            }
-                          } catch (e) {
-                            print("Erreur complète : $e");
-                            if (mounted) {
+                            final phone = _phoneController.text.trim();
+                            if (phone.isEmpty || phone.length < 9) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Erreur paiement : $e"),
+                                const SnackBar(
+                                  content: Text("Numéro invalide"),
                                   backgroundColor: Colors.red,
                                 ),
                               );
+                              return;
                             }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isLoading = false);
+
+                            final token = await LocalStorageService.getToken();
+                            print(
+                              "Token JWT récupéré : ${token != null ? 'présent' : 'ABSENT'}",
+                            );
+
+                            if (token == null || token.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Veuillez vous connecter d'abord",
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  duration: Duration(seconds: 4),
+                                ),
+                              );
+                              Navigator.pushNamed(context, '/login');
+                              return;
                             }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(40),
+
+                            setState(() => _isLoading = true);
+
+                            try {
+                              final response = await http.post(
+                                Uri.parse(backendUrl),
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer $token',
+                                },
+                                body: json.encode({
+                                  'qrCodeId': scannedData!['qrCodeId'],
+                                  'telephoneClient': phone,
+                                  'operator': _selectedOperator,
+                                  'montant': total.toString(),
+                                  'directPayment': true,
+                                }),
+                              );
+
+                              print("Statut réponse : ${response.statusCode}");
+                              print("Réponse serveur : ${response.body}");
+
+                              if (response.statusCode == 200) {
+                                final resData = json.decode(response.body);
+                                if (resData['success'] == true) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        resData['message'] ??
+                                            "Demande de paiement envoyée ! Vérifiez votre téléphone.",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: const Duration(seconds: 8),
+                                    ),
+                                  );
+                                  Navigator.pop(context);
+                                  _showInitiatedDialog();
+                                } else {
+                                  throw Exception(
+                                    resData['message'] ?? 'Erreur serveur',
+                                  );
+                                }
+                              } else {
+                                throw Exception(
+                                  'Erreur ${response.statusCode} – ${response.body}',
+                                );
+                              }
+                            } catch (e) {
+                              print("Erreur complète : $e");
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Erreur paiement : $e"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _isLoading = false);
+                            }
+                          },
+                          child: Center(
+                            child:
+                                _isLoading
+                                    ? const SizedBox(
+                                      width: 28,
+                                      height: 28,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                    : const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          color: Colors.white,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "Payer",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              "Payer",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ),

@@ -5,11 +5,7 @@ import 'dart:convert';
 import '../models/api_models.dart';
 
 class ApiService {
-  // ⚠️ À ADAPTER selon votre environnement
-  static const String baseUrl =
-      'http://192.168.1.144:8080/api'; // address de mon pc
-  // Pour vrai téléphone : 'http://192.168.X.X:8080/api'  (remplacer X.X par l'IP de votre PC)
-  // Pour localhost : 'http://localhost:8080/api'
+  static const String baseUrl = 'https://backend-qr-code-u2kx.onrender.com/api';
 
   static Map<String, String> _getHeaders({String? token}) {
     final headers = {
@@ -172,38 +168,39 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // PASSWORD RESET
-  // ==========================================
+  // ───────────────────────────────────────────────
+  // MOT DE PASSE OUBLIÉ - Étape 1 : Demander le code
+  // ───────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> forgotPassword({
-    required String email,
-  }) async {
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/forgot-password'),
-        headers: _getHeaders(),
-        body: jsonEncode({'email': email}),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
       );
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
+        final data = json.decode(response.body);
         return {
           'success': true,
-          'message': jsonResponse['message'] ?? 'Vérifiez votre email',
+          'message': data['message'] ?? 'Code envoyé ! Vérifiez votre email.',
         };
       } else {
-        final jsonResponse = jsonDecode(response.body);
+        final data = json.decode(response.body);
         return {
           'success': false,
-          'message': jsonResponse['message'] ?? 'Erreur',
+          'message': data['message'] ?? 'Erreur : ${response.statusCode}',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Erreur: $e'};
+      return {'success': false, 'message': 'Erreur réseau : $e'};
     }
   }
 
+  // ───────────────────────────────────────────────
+  // MOT DE PASSE OUBLIÉ - Étape 2 : Réinitialiser avec code
+  // ───────────────────────────────────────────────
   static Future<Map<String, dynamic>> resetPassword({
     required String code,
     required String newPassword,
@@ -211,25 +208,25 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/reset-password'),
-        headers: _getHeaders(),
-        body: jsonEncode({'code': code, 'newPassword': newPassword}),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'code': code, 'newPassword': newPassword}),
       );
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
+        final data = json.decode(response.body);
         return {
           'success': true,
-          'message': jsonResponse['message'] ?? 'Mot de passe réinitialisé',
+          'message': data['message'] ?? 'Mot de passe changé avec succès !',
         };
       } else {
-        final jsonResponse = jsonDecode(response.body);
+        final data = json.decode(response.body);
         return {
           'success': false,
-          'message': jsonResponse['message'] ?? 'Erreur',
+          'message': data['message'] ?? 'Erreur : ${response.statusCode}',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Erreur: $e'};
+      return {'success': false, 'message': 'Erreur réseau : $e'};
     }
   }
 
