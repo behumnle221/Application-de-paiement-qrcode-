@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/landing',
       routes: {
-        '/landing': (context) => const LandingPage(),
+        '/landing': (context) => const OnboardingPage(),
         '/role_selection': (context) => const RoleSelectionScreen(),
         '/login': (context) => const LoginScreen(),
         '/register_client': (context) => const RegisterClientScreen(),
@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
       },
       // Si une route n'existe pas, on revient à la landing par défaut
       onUnknownRoute: (settings) {
-        return MaterialPageRoute(builder: (context) => const LandingPage());
+        return MaterialPageRoute(builder: (context) => const OnboardingPage());
       },
     );
   }

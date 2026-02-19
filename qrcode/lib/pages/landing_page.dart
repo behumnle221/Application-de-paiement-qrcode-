@@ -1,338 +1,212 @@
 import 'package:flutter/material.dart';
 
-class LandingPage extends StatelessWidget {
-  const LandingPage({super.key});
+class OnboardingPage extends StatefulWidget {
+  const OnboardingPage({super.key});
+
+  @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends State<OnboardingPage> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  final List<OnboardingData> _data = [
+    OnboardingData(
+      title: "Bienvenue sur PayQr",
+      description: "L'élégance du paiement numérique au creux de votre main. Simple, rapide et résolument moderne.",
+      image: "assets/images/omboarding/1_images.png",
+    ),
+    OnboardingData(
+      title: "Scannez en un Éclair",
+      description: "Oubliez la monnaie et les attentes. Une simple mise au point, et votre transaction est effectuée.",
+      image: "assets/images/omboarding/2_images.png",
+    ),
+    OnboardingData(
+      title: "Sécurité Absolue",
+      description: "Chaque centime compte. Vos transactions sont protégées par les standards de sécurité les plus élevés.",
+      image: "assets/images/omboarding/3_images.png",
+    ),
+    OnboardingData(
+      title: "Libérez votre Quotidien",
+      description: "Rejoignez la révolution sans contact. Payez partout, tout le temps, en toute sérénité.",
+      image: "assets/images/omboarding/4_images.png",
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF6366F1);
-    const Color accentColor = Color(0xFF10B981);
-    const Color backgroundColor = Color(0xFFF8FAFC);
-    const Color textDarkColor = Color(0xFF1E293B);
-    const Color textLightColor = Color(0xFF64748B);
+    const Color primaryBlue = Color(0xFF1E3A8A); // Bleu profond PayQr
 
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // HERO SECTION avec image
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor.withOpacity(0.1), backgroundColor],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 28.0,
-                    vertical: 60.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Image QR-Code avec illustration
-                      Container(
-                        width: 280,
-                        height: 280,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryColor.withOpacity(0.2),
-                              blurRadius: 24,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          'assets/images/qr_illustration.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-
-                      // Titre principal
-                      Text(
-                        "QR Pay",
-                        style: Theme.of(
-                          context,
-                        ).textTheme.headlineLarge?.copyWith(
-                          color: textDarkColor,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 40,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Sous-titre
-                      Text(
-                        "Paiements instantanés par QR-Code",
-                        style: TextStyle(
-                          color: textLightColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Description
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          "Scannez, payez, c'est fait. Rapide, sécurisé et sans contact. L'avenir des paiements commence ici.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: textLightColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            height: 1.6,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // FEATURES SECTION
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  children: [
-                    // Feature 1
-                    _buildFeatureCard(
-                      icon: Icons.qr_code_scanner_rounded,
-                      title: "Scan Rapide",
-                      description: "Scannez un QR-Code en une seconde",
-                      color: primaryColor,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Feature 2
-                    _buildFeatureCard(
-                      icon: Icons.lock_rounded,
-                      title: "Ultra Sécurisé",
-                      description: "Vos données sont protégées par chiffrement",
-                      color: accentColor,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Feature 3
-                    _buildFeatureCard(
-                      icon: Icons.flash_on_rounded,
-                      title: "Instantané",
-                      description: "Les paiements sont confirmés en temps réel",
-                      color: const Color(0xFFFF6B35),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 60),
-
-              // CALL TO ACTION BUTTONS
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  children: [
-                    // Bouton Commencer
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [primaryColor, Color(0xFF4F46E5)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withOpacity(0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            '/role_selection',
-                            (route) => false,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          "Commencer",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Bouton Déjà inscrit
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: () {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/login',
-                              (route) => false,
-                            );
-                          },
-                          child: Center(
-                            child: Text(
-                              "J'ai déjà un compte",
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // FOOTER
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  children: [
-                    Divider(color: const Color(0xFFE2E8F0), thickness: 1),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "En continuant, vous acceptez nos ",
-                          style: TextStyle(
-                            color: textLightColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {},
-                          child: Text(
-                            "conditions",
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required String description,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
+      backgroundColor: Colors.white,
+      body: Stack(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(child: Icon(icon, color: color, size: 28)),
+          // 1. Le PageView pour les images et textes
+          PageView.builder(
+            controller: _pageController,
+            itemCount: _data.length,
+            onPageChanged: (int page) {
+              setState(() => _currentPage = page);
+            },
+            itemBuilder: (context, index) {
+              return OnboardingContent(data: _data[index]);
+            },
           ),
-          const SizedBox(width: 16),
-          Expanded(
+
+          // 2. Bouton "Passer" (Skip) - En haut à droite
+          if (_currentPage < _data.length - 1)
+            Positioned(
+              top: 50,
+              right: 20,
+              child: TextButton(
+                onPressed: () => _pageController.jumpToPage(_data.length - 1),
+                child: const Text(
+                  "Passer",
+                  style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ),
+
+          // 3. Navigation en bas
+          Positioned(
+            bottom: 50,
+            left: 20,
+            right: 20,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
+                // Indicateurs (Dots)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _data.length,
+                    (index) => buildDot(index, _currentPage, primaryBlue),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF64748B),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 40),
+                
+                // Boutons de navigation
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Bouton Précédent (Caché sur la page 1)
+                    _currentPage > 0
+                        ? IconButton(
+                            onPressed: () {
+                              _pageController.previousPage(
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_back_ios_new, color: primaryBlue),
+                          )
+                        : const SizedBox(width: 48),
+
+                    // Bouton Suivant / Commencer
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_currentPage == _data.length - 1) {
+                          // Action finale vers la sélection de rôle
+                          Navigator.pushNamedAndRemoveUntil(context, '/role_selection', (route) => false);
+                        } else {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      ),
+                      child: Text(
+                        _currentPage == _data.length - 1 ? "Commencer" : "Suivant",
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget buildDot(int index, int currentPage, Color color) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: 8,
+      width: currentPage == index ? 24 : 8,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        color: currentPage == index ? color : color.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+}
+
+// Classe de données
+class OnboardingData {
+  final String title, description, image;
+  OnboardingData({required this.title, required this.description, required this.image});
+}
+
+// Widget pour le contenu de chaque page
+class OnboardingContent extends StatelessWidget {
+  final OnboardingData data;
+  const OnboardingContent({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 80),
+        // Image
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: Image.asset(data.image, fit: BoxFit.cover),
+            ),
+          ),
+        ),
+        // Texte
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              children: [
+                Text(
+                  data.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  data.description,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF64748B),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
