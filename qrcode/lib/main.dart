@@ -10,6 +10,7 @@ import 'package:qrcode/pages/landing_page.dart';
 import 'pages/login_screen.dart';
 import 'pages/register_screen.dart';
 import 'package:qrcode/pages/merchant_dashboard.dart';
+import 'package:qrcode/pages/client/client_home_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/merchant': (context) => const MerchantScreen(),
         '/merchant_dashboard': (context) => const MerchantDashboard(),
         '/client_scan': (context) => const ClientScanScreen(),
+        '/client_home': (context) => const ClientHomeScreen(),
 
         // '/home': (context) => const HomeScreen(),
         // '/scan': (context) => const ScanQrScreen(),

@@ -1,5 +1,3 @@
-// lib/services/vendor_service.dart
-
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/vendor_models.dart';
@@ -48,6 +46,38 @@ class VendorService {
           'message':
               jsonResponse['message'] ??
               'Erreur lors de la récupération du solde',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // SOLDE AANGARAA (solde réel du compte marchand)
+  // ==========================================
+
+  static Future<Map<String, dynamic>> getSoldeAangaraa() async {
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/solde-aangaraa'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+
+        return {
+          'success': true,
+          'message': jsonResponse['message'] ?? 'Solde récupéré',
+          'data': jsonResponse['data'],
+        };
+      } else {
+        final jsonResponse = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': jsonResponse['message'] ?? 'Erreur',
         };
       }
     } catch (e) {
@@ -108,12 +138,17 @@ class VendorService {
   static Future<Map<String, dynamic>> demandRetrait({
     required double montant,
     required String operateur,
+    required String telephone, // NOUVEAU PARAMÈTRE REQUIS
   }) async {
     try {
       final headers = await _getAuthHeaders();
 
       final body =
-          RetraitRequest(montant: montant, operateur: operateur).toJson();
+          RetraitRequest(
+            montant: montant,
+            operateur: operateur,
+            telephone: telephone, // NOUVEAU
+          ).toJson();
 
       final response = await http.post(
         Uri.parse('$baseUrl/retraits'),
@@ -177,6 +212,44 @@ class VendorService {
           'message':
               jsonResponse['message'] ??
               'Erreur lors de la récupération des retraits',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Erreur: $e'};
+    }
+  }
+
+  // ==========================================
+  // VÉRIFIER NUMÉRO DE TÉLÉPHONE
+  // ==========================================
+
+  static Future<Map<String, dynamic>> verifyPhone({
+    required String telephone,
+    required String operateur,
+  }) async {
+    try {
+      final headers = await _getAuthHeaders();
+
+      final body = {'telephone': telephone, 'operateur': operateur};
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-phone'),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': jsonResponse['message'] ?? 'Numéro vérifié',
+          'data': jsonResponse['data'],
+        };
+      } else {
+        final jsonResponse = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': jsonResponse['message'] ?? 'Erreur',
         };
       }
     } catch (e) {

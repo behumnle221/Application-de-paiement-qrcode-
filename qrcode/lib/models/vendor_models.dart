@@ -54,7 +54,7 @@ class Transaction {
   }
 }
 
-// Liste des Transactions avec pagination
+//Liste des Transactions avec pagination
 class TransactionListResponse {
   final List<Transaction> transactions;
   final int totalElements;
@@ -97,6 +97,7 @@ class Retrait {
   final String operateur; // MTN_Cameroon, Orange_Cameroon
   final String? referenceId;
   final String? message;
+  final String? telephone; // NOUVEAU CHAMP
 
   Retrait({
     required this.id,
@@ -106,6 +107,7 @@ class Retrait {
     required this.operateur,
     this.referenceId,
     this.message,
+    this.telephone,
   });
 
   factory Retrait.fromJson(Map<String, dynamic> json) {
@@ -117,6 +119,7 @@ class Retrait {
       operateur: json['operateur'] ?? 'MTN_Cameroon',
       referenceId: json['referenceId'],
       message: json['message'],
+      telephone: json['telephone'],
     );
   }
 }
@@ -155,12 +158,21 @@ class RetraitListResponse {
   }
 }
 
-// Request pour retrait
+// Request pour retrait - AVEC TELEPHONE
 class RetraitRequest {
   final double montant;
   final String operateur; // MTN_Cameroon, Orange_Cameroon
+  final String telephone; // NOUVEAU CHAMP REQUIS
 
-  RetraitRequest({required this.montant, required this.operateur});
+  RetraitRequest({
+    required this.montant,
+    required this.operateur,
+    required this.telephone,
+  });
 
-  Map<String, dynamic> toJson() => {'montant': montant, 'operateur': operateur};
+  Map<String, dynamic> toJson() => {
+    'montant': montant,
+    'operateur': operateur,
+    'telephone': telephone,
+  };
 }
