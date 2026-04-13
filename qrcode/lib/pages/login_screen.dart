@@ -1,10 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:qrcode/services/api_service.dart';
 import 'package:qrcode/services/local_storage_service.dart';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,23 +15,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool rememberMe = false;
   bool _showPassword = false;
   final _formKey = GlobalKey<FormState>();
-
-  Future<File> get _usersFile async {
-    final directory = await getApplicationDocumentsDirectory();
-    return File('${directory.path}/data/users.json');
-  }
-
-  Future<List<Map<String, dynamic>>> _loadUsers() async {
-    try {
-      final file = await _usersFile;
-      if (!await file.exists()) return [];
-      final content = await file.readAsString();
-      final List<dynamic> jsonList = json.decode(content);
-      return jsonList.cast<Map<String, dynamic>>();
-    } catch (e) {
-      return [];
-    }
-  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -234,33 +213,35 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 20,
                               height: 20,
                               decoration: BoxDecoration(
-                                color: rememberMe
-                                    ? primaryColor
-                                    : Colors.transparent,
+                                color:
+                                    rememberMe
+                                        ? primaryColor
+                                        : Colors.transparent,
                                 border: Border.all(
-                                  color: rememberMe
-                                      ? primaryColor
-                                      : borderColor,
+                                  color:
+                                      rememberMe ? primaryColor : borderColor,
                                   width: 2,
                                 ),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: rememberMe
-                                  ? const Icon(
-                                      Icons.check,
-                                      size: 14,
-                                      color: Colors.white,
-                                    )
-                                  : null,
+                              child:
+                                  rememberMe
+                                      ? const Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: Colors.white,
+                                      )
+                                      : null,
                             ),
                             const SizedBox(width: 10),
                             Text(
                               "Se souvenir de moi",
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: textDarkColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                color: textDarkColor,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
@@ -277,11 +258,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         child: Text(
                           "Mot de passe oublié?",
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
+                            color: primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -344,18 +326,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/role_selection'),
+                        onTap:
+                            () =>
+                                Navigator.pushNamed(context, '/role_selection'),
                         child: Center(
                           child: Text(
                             "Créer un compte",
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: primaryColor,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: primaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
@@ -814,9 +798,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? const Color(0xFF6366F1)
-                      : const Color(0xFFE2E8F0),
+                  color:
+                      isActive
+                          ? const Color(0xFF6366F1)
+                          : const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Center(
@@ -834,9 +819,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 Expanded(
                   child: Container(
                     height: 2,
-                    color: index < step
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFFE2E8F0),
+                    color:
+                        index < step
+                            ? const Color(0xFF6366F1)
+                            : const Color(0xFFE2E8F0),
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                 ),
@@ -941,9 +927,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(result['message']),
-                  backgroundColor: result['success']
-                      ? Colors.green
-                      : Colors.orange,
+                  backgroundColor:
+                      result['success'] ? Colors.green : Colors.orange,
                 ),
               );
             },
@@ -1006,8 +991,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           label: "Confirmer le mot de passe",
           primaryColor: primaryColor,
           showPassword: _showConfirmPassword,
-          onToggle: () =>
-              setState(() => _showConfirmPassword = !_showConfirmPassword),
+          onToggle:
+              () =>
+                  setState(() => _showConfirmPassword = !_showConfirmPassword),
           validator: (value) {
             if (value != _newPasswordController.text) {
               return "Les mots de passe ne correspondent pas";

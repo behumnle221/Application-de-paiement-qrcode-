@@ -15,7 +15,6 @@ class ClientHomeScreen extends StatefulWidget {
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
   String? _userName;
-  String? _userEmail;
 
   @override
   void initState() {
@@ -28,12 +27,10 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
     if (userData != null) {
       setState(() {
         _userName = userData['nom'] ?? 'Client';
-        _userEmail = userData['email'] ?? 'email@example.com';
       });
     } else {
       setState(() {
         _userName = 'Client';
-        _userEmail = 'email@example.com';
       });
     }
   }

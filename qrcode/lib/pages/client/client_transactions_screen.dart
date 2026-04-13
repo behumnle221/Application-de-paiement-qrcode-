@@ -5,7 +5,8 @@ class ClientTransactionsScreen extends StatefulWidget {
   const ClientTransactionsScreen({super.key});
 
   @override
-  State<ClientTransactionsScreen> createState() => _ClientTransactionsScreenState();
+  State<ClientTransactionsScreen> createState() =>
+      _ClientTransactionsScreenState();
 }
 
 class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
@@ -34,13 +35,13 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
       if (result['success'] == true) {
         final data = result['data'];
         List<dynamic> transactionsList = [];
-        
+
         if (data is List) {
           transactionsList = data;
         } else if (data is Map && data.containsKey('content')) {
           transactionsList = data['content'] ?? [];
         }
-        
+
         setState(() {
           _transactions = transactionsList;
           _isLoading = false;
@@ -56,21 +57,6 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
         _errorMessage = 'Erreur de connexion: $e';
         _isLoading = false;
       });
-    }
-  }
-
-  String _getStatutColor(String statut) {
-    switch (statut?.toUpperCase()) {
-      case 'SUCCESS':
-      case 'SUCCESSFUL':
-        return '#10B981'; // Green
-      case 'PENDING':
-        return '#F59E0B'; // Orange
-      case 'FAILED':
-      case 'CANCELLED':
-        return '#EF4444'; // Red
-      default:
-        return '#6B7280'; // Gray
     }
   }
 
@@ -109,7 +95,10 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E20CD)),
+                      icon: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Color(0xFF1E20CD),
+                      ),
                     ),
                     const Expanded(
                       child: Text(
@@ -152,13 +141,14 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
 
               // Liste des transactions
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _errorMessage.isNotEmpty
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _errorMessage.isNotEmpty
                         ? _buildErrorWidget()
                         : _transactions.isEmpty
-                            ? _buildEmptyWidget()
-                            : _buildTransactionsList(),
+                        ? _buildEmptyWidget()
+                        : _buildTransactionsList(),
               ),
             ],
           ),
@@ -211,12 +201,14 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
   }
 
   Widget _buildTransactionCard(dynamic transaction) {
-    final type = transaction['transactionType'] ?? transaction['type'] ?? 'TRANSACTION';
+    final type =
+        transaction['transactionType'] ?? transaction['type'] ?? 'TRANSACTION';
     final montant = transaction['montant'] ?? 0;
     final statut = transaction['statut'] ?? 'UNKNOWN';
-    final dateCreation = transaction['dateCreation'] ?? transaction['createdAt'];
+    final dateCreation =
+        transaction['dateCreation'] ?? transaction['createdAt'];
     final message = transaction['message'] ?? '';
-    
+
     Color statutColor;
     switch (statut.toString().toUpperCase()) {
       case 'SUCCESS':
@@ -277,11 +269,10 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  dateCreation != null ? _formatDate(dateCreation.toString()) : '',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  dateCreation != null
+                      ? _formatDate(dateCreation.toString())
+                      : '',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 if (message.isNotEmpty) ...[
                   const SizedBox(height: 4),
@@ -349,7 +340,10 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1E20CD),
               ),
-              child: const Text('Réessayer', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Réessayer',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),

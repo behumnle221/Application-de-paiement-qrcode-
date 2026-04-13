@@ -29,81 +29,115 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Historique des Transactions',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Historique des Transactions'),
+        backgroundColor: const Color(0xFF1E20CD),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header avec statistiques
+          Container(
+            color: const Color(0xFF1E20CD),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Vos Transactions',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // Filtre par statut
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildFilterChip('Tous', null),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Succès', 'SUCCESS'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('En attente', 'PENDING'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Échoué', 'FAILED'),
-                  ],
+                const SizedBox(height: 16),
+                // Filtre par statut
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('Toutes', null),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('✓ Succès', 'SUCCESS'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('⏳ En attente', 'PENDING'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('✗ Échouées', 'FAILED'),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        // Liste des transactions
-        Expanded(
-          child: FutureBuilder<Map<String, dynamic>>(
-            future: _transactionsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF1E20CD)),
+
+          // Liste des transactions
+          Expanded(
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: _transactionsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF1E20CD)),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _buildErrorWidget(snapshot.error.toString());
+                }
+
+                final data = snapshot.data ?? {};
+
+                if (!data['success']) {
+                  return _buildErrorWidget(data['message'] ?? 'Erreur');
+                }
+
+                final transactionsList =
+                    data['data'] as TransactionListResponse;
+
+                if (transactionsList.transactions.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    _loadTransactions();
+                    await _transactionsFuture;
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount:
+                        transactionsList.transactions.length +
+                        (transactionsList.hasNextPage ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index < transactionsList.transactions.length) {
+                        final transaction =
+                            transactionsList.transactions[index];
+                        return _buildTransactionCard(transaction);
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() => _currentPage++);
+                              _loadTransactions();
+                            },
+                            child: const Text('Charger plus'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
-              }
-
-              if (snapshot.hasError) {
-                return _buildErrorWidget(snapshot.error.toString());
-              }
-
-              final data = snapshot.data ?? {};
-
-              if (!data['success']) {
-                return _buildErrorWidget(data['message'] ?? 'Erreur');
-              }
-
-              final transactionsList = data['data'] as TransactionListResponse;
-
-              if (transactionsList.transactions.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: transactionsList.transactions.length,
-                itemBuilder: (context, index) {
-                  final transaction = transactionsList.transactions[index];
-                  return _buildTransactionCard(transaction);
-                },
-              );
-            },
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -138,12 +172,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
             ? Colors.orange
             : Colors.red;
 
+    final statusIcon =
+        transaction.statut == 'SUCCESS'
+            ? Icons.check_circle_rounded
+            : transaction.statut == 'PENDING'
+            ? Icons.schedule_rounded
+            : Icons.error_rounded;
+
     final statusLabel =
         transaction.statut == 'SUCCESS'
             ? 'Succès'
             : transaction.statut == 'PENDING'
             ? 'En attente'
-            : 'Échoué';
+            : 'Échouée';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -151,11 +192,11 @@ class _TransactionsPageState extends State<TransactionsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: statusColor.withOpacity(0.2), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -163,6 +204,61 @@ class _TransactionsPageState extends State<TransactionsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Ligne 1: Montant et Statut
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '+${transaction.montant.toStringAsFixed(0)} XAF',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    transaction.description.isEmpty
+                        ? 'Paiement reçu'
+                        : transaction.description,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, color: statusColor, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      statusLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Ligne 2: Infos supplémentaires
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -171,54 +267,35 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${transaction.montant.toStringAsFixed(2)} XAF',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E20CD),
-                      ),
+                      'Client: ${transaction.clientPhone}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      transaction.description.isEmpty
-                          ? 'Paiement reçu'
-                          : transaction.description,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      transaction.dateCreation,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  statusLabel,
+                  'ID: ${transaction.id}',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                    fontFamily: 'monospace',
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                transaction.clientPhone,
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-              ),
-              Text(
-                transaction.dateCreation,
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
             ],
           ),

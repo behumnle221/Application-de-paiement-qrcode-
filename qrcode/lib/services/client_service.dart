@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'local_storage_service.dart';
 
 class ClientService {
-  static const String baseUrl =
-      'https://backend-qr-code-u2kx.onrender.com/api/client';
+  static const String baseUrl = 'https://backend-qr-code-u2kx.onrender.com/api';
 
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await LocalStorageService.getToken();
@@ -23,26 +22,40 @@ class ClientService {
     try {
       final headers = await _getAuthHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/solde'),
+        Uri.parse('$baseUrl/client/solde'),
         headers: headers,
       );
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
+
+        // Le backend retourne directement un nombre (BigDecimal), pas un objet
+        double solde = 0.0;
+        if (jsonResponse is Map) {
+          // Si c'est un objet JSON, essayer d'accéder aux champs
+          solde =
+              jsonResponse['data']?['solde']?.toDouble() ??
+              jsonResponse['solde']?.toDouble() ??
+              0.0;
+        } else if (jsonResponse is num) {
+          // Si c'est directement un nombre, l'utiliser
+          solde = jsonResponse.toDouble();
+        }
+
         return {
           'success': true,
-          'solde': jsonResponse,
+          'solde': solde,
+          'devise': 'XAF',
           'message': 'Solde récupéré avec succès',
         };
       } else {
-        final jsonResponse = jsonDecode(response.body);
         return {
           'success': false,
-          'message': jsonResponse['message'] ?? 'Erreur lors de la récupération du solde',
+          'message': 'Erreur lors de la récupération du solde',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Erreur: $e'};
+      return {'success': false, 'message': 'Erreur de connexion: $e'};
     }
   }
 
@@ -54,7 +67,7 @@ class ClientService {
     required double montant,
     required String operateur,
     String? telephone,
-    bool directPayment = false,
+    bool directPayment = true,
   }) async {
     try {
       final headers = await _getAuthHeaders();
@@ -62,22 +75,28 @@ class ClientService {
       final body = {
         'montant': montant,
         'operateur': operateur,
-        if (telephone != null) 'telephone': telephone,
+        'telephone': telephone,
         'directPayment': directPayment,
       };
 
+      print('📤 Rechargement - Requête: $body');
+      print('📤 URL: $baseUrl/client/recharger');
+
       final response = await http.post(
-        Uri.parse('$baseUrl/recharger'),
+        Uri.parse('$baseUrl/client/recharger'),
         headers: headers,
         body: jsonEncode(body),
       );
 
-      if (response.statusCode == 200) {
+      print('📥 Statut: ${response.statusCode}');
+      print('📥 Réponse: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonResponse = jsonDecode(response.body);
         return {
           'success': true,
-          'message': jsonResponse['message'] ?? 'Rechargement initiated',
-          'data': jsonResponse,
+          'message': jsonResponse['message'] ?? 'Rechargement initié',
+          'data': jsonResponse['data'],
         };
       } else {
         final jsonResponse = jsonDecode(response.body);
@@ -87,7 +106,8 @@ class ClientService {
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Erreur: $e'};
+      print('❌ Erreur rechargement: $e');
+      return {'success': false, 'message': 'Erreur de connexion: $e'};
     }
   }
 
@@ -110,7 +130,7 @@ class ClientService {
       };
 
       final response = await http.post(
-        Uri.parse('$baseUrl/retraits'),
+        Uri.parse('$baseUrl/client/retraits'),
         headers: headers,
         body: jsonEncode(body),
       );
@@ -142,7 +162,7 @@ class ClientService {
       final headers = await _getAuthHeaders();
 
       final response = await http.get(
-        Uri.parse('$baseUrl/retraits?page=$page&size=$size'),
+        Uri.parse('$baseUrl/client/retraits?page=$page&size=$size'),
         headers: headers,
       );
 
@@ -179,7 +199,7 @@ class ClientService {
     try {
       final headers = await _getAuthHeaders();
 
-      String url = '$baseUrl/transactions?page=$page&size=$size';
+      String url = '$baseUrl/client/transactions?page=$page&size=$size';
       if (statut != null) url += '&statut=$statut';
       if (dateDebut != null) url += '&dateDebut=$dateDebut';
       if (dateFin != null) url += '&dateFin=$dateFin';
