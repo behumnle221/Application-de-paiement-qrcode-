@@ -10,7 +10,7 @@ class ClientBalanceScreen extends StatefulWidget {
 
 class _ClientBalanceScreenState extends State<ClientBalanceScreen> {
   bool _isLoading = true;
-  dynamic _solde;
+  double? _solde;           // Changé en double? pour plus de clarté
   String _errorMessage = '';
 
   @override
@@ -19,32 +19,40 @@ class _ClientBalanceScreenState extends State<ClientBalanceScreen> {
     _loadSolde();
   }
 
-  Future<void> _loadSolde() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
+  // Chargement du solde
+  Future<void> _loadSolde({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+    }
 
     try {
       final result = await ClientService.getSolde();
-      
+
       if (result['success'] == true) {
         setState(() {
-          _solde = result['solde'];
-          _isLoading = false;
+          _solde = result['solde']?.toDouble() ?? 0.0;
+          _errorMessage = '';
         });
       } else {
         setState(() {
           _errorMessage = result['message'] ?? 'Erreur lors du chargement du solde';
-          _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Erreur de connexion: $e';
-        _isLoading = false;
       });
+    } finally {
+      setState(() => _isLoading = false);
     }
+  }
+
+  // Rafraîchissement manuel (Pull to Refresh)
+  Future<void> _onRefresh() async {
+    await _loadSolde(showLoading: false);
   }
 
   @override
@@ -59,148 +67,164 @@ class _ClientBalanceScreenState extends State<ClientBalanceScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E20CD)),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Mon Solde',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-              ),
-
-              // Solde Card
-              Expanded(
-                child: Padding(
+          child: RefreshIndicator(
+            onRefresh: _onRefresh,
+            color: const Color(0xFF1E20CD),
+            child: Column(
+              children: [
+                // Header avec bouton Refresh
+                Padding(
                   padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Row(
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(32),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFF1E20CD), Color(0xFF3B82F6)],
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E20CD)),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Mon Solde',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937),
                           ),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF1E20CD).withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Solde du Compte Virtuel',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (_isLoading)
-                              const CircularProgressIndicator(color: Colors.white)
-                            else if (_errorMessage.isNotEmpty)
-                              Column(
-                                children: [
-                                  const Icon(Icons.error_outline, color: Colors.white, size: 40),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _errorMessage,
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextButton(
-                                    onPressed: _loadSolde,
-                                    child: const Text('Réessayer', style: TextStyle(color: Colors.white)),
-                                  ),
-                                ],
-                              )
-                            else
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _solde != null ? _solde.toString() : '0',
-                                    style: const TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 20),
-                                    child: Text(
-                                      ' XAF',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      if (!_isLoading && _errorMessage.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.info_outline, color: Color(0xFF10B981)),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Ce solde correspond à votre compte virtuel. Utilisez-le pour payer chez les marchands.',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF10B981),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // Bouton d'actualisation
+                      IconButton(
+                        onPressed: _isLoading ? null : () => _loadSolde(),
+                        icon: const Icon(Icons.refresh, color: Color(0xFF1E20CD)),
+                        tooltip: 'Actualiser le solde',
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // Contenu principal
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF1E20CD), Color(0xFF3B82F6)],
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF1E20CD).withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Solde du Compte Virtuel',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              if (_isLoading)
+                                const CircularProgressIndicator(color: Colors.white)
+                              else if (_errorMessage.isNotEmpty)
+                                Column(
+                                  children: [
+                                    const Icon(Icons.error_outline, color: Colors.white, size: 40),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _errorMessage,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextButton(
+                                      onPressed: () => _loadSolde(),
+                                      child: const Text(
+                                        'Réessayer',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _solde?.toStringAsFixed(0) ?? '0',
+                                      style: const TextStyle(
+                                        fontSize: 52,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 22),
+                                      child: Text(
+                                        ' XAF',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        if (!_isLoading && _errorMessage.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.info_outline, color: Color(0xFF10B981)),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Ce solde correspond à votre compte virtuel. Utilisez-le pour payer chez les marchands.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+

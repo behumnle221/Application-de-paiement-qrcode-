@@ -32,20 +32,25 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
         statut: _selectedStatut,
       );
 
+      print('📥 Transactions result: $result'); // ← DEBUG important
+
       if (result['success'] == true) {
         final data = result['data'];
+
         List<dynamic> transactionsList = [];
 
         if (data is List) {
           transactionsList = data;
-        } else if (data is Map && data.containsKey('content')) {
-          transactionsList = data['content'] ?? [];
+        } else if (data is Map) {
+          transactionsList = data['content'] ?? data['transactions'] ?? [];
         }
 
         setState(() {
           _transactions = transactionsList;
           _isLoading = false;
         });
+
+        print('✅ Nombre de transactions chargées : ${_transactions.length}');
       } else {
         setState(() {
           _errorMessage = result['message'] ?? 'Erreur lors du chargement';
@@ -53,11 +58,17 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
         });
       }
     } catch (e) {
+      print('❌ Exception lors du chargement des transactions: $e');
       setState(() {
         _errorMessage = 'Erreur de connexion: $e';
         _isLoading = false;
       });
     }
+  }
+
+  // Rafraîchissement par swipe
+  Future<void> _onRefresh() async {
+    await _loadTransactions();
   }
 
   IconData _getTransactionIcon(String? type) {
@@ -86,71 +97,72 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Color(0xFF1E20CD),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Historique des Transactions',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _loadTransactions,
-                      icon: const Icon(Icons.refresh, color: Color(0xFF1E20CD)),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Filtres
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+          child: RefreshIndicator(
+            onRefresh: _onRefresh,
+            color: const Color(0xFF1E20CD),
+            backgroundColor: Colors.white,
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20),
                   child: Row(
                     children: [
-                      _buildFilterChip(null, 'Tous'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('SUCCESS', 'Réussis'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('PENDING', 'En attente'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('FAILED', 'Échoués'),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1E20CD)),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Historique des Transactions',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _isLoading ? null : _loadTransactions,
+                        icon: const Icon(Icons.refresh, color: Color(0xFF1E20CD)),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
 
-              // Liste des transactions
-              Expanded(
-                child:
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _errorMessage.isNotEmpty
-                        ? _buildErrorWidget()
-                        : _transactions.isEmpty
-                        ? _buildEmptyWidget()
-                        : _buildTransactionsList(),
-              ),
-            ],
+                // Filtres
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip(null, 'Tous'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('SUCCESS', 'Réussis'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('PENDING', 'En attente'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('FAILED', 'Échoués'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Liste
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _errorMessage.isNotEmpty
+                          ? _buildErrorWidget()
+                          : _transactions.isEmpty
+                              ? _buildEmptyWidget()
+                              : _buildTransactionsList(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -161,9 +173,7 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
     final isSelected = _selectedStatut == value;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedStatut = value;
-        });
+        setState(() => _selectedStatut = value);
         _loadTransactions();
       },
       child: Container(
@@ -187,26 +197,27 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
   }
 
   Widget _buildTransactionsList() {
-    return RefreshIndicator(
-      onRefresh: _loadTransactions,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: _transactions.length,
-        itemBuilder: (context, index) {
-          final transaction = _transactions[index];
-          return _buildTransactionCard(transaction);
-        },
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      physics: const AlwaysScrollableScrollPhysics(), // Important pour le refresh
+      itemCount: _transactions.length,
+      itemBuilder: (context, index) {
+        return _buildTransactionCard(_transactions[index]);
+      },
     );
   }
 
+  // Le reste de tes méthodes (_buildTransactionCard, _buildErrorWidget, _buildEmptyWidget, _formatDate) reste identique
+  // Je ne les recopie pas pour gagner de la place, mais garde-les tels quels.
+
   Widget _buildTransactionCard(dynamic transaction) {
-    final type =
-        transaction['transactionType'] ?? transaction['type'] ?? 'TRANSACTION';
+    final type = transaction['transactionType'] ?? 
+                transaction['type'] ?? 
+                'TRANSACTION';
+
     final montant = transaction['montant'] ?? 0;
     final statut = transaction['statut'] ?? 'UNKNOWN';
-    final dateCreation =
-        transaction['dateCreation'] ?? transaction['createdAt'];
+    final dateCreation = transaction['dateCreation'] ?? transaction['createdAt'];
     final message = transaction['message'] ?? '';
 
     Color statutColor;
@@ -271,7 +282,7 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
                 Text(
                   dateCreation != null
                       ? _formatDate(dateCreation.toString())
-                      : '',
+                      : 'Date inconnue',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 if (message.isNotEmpty) ...[
@@ -290,14 +301,14 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${montant.toString()} XAF',
+                '${montant} XAF',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1E20CD),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -305,7 +316,7 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  statut,
+                  statut.toString().toUpperCase(),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -329,21 +340,12 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text(
-              _errorMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text(_errorMessage, textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _loadTransactions,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E20CD),
-              ),
-              child: const Text(
-                'Réessayer',
-                style: TextStyle(color: Colors.white),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E20CD)),
+              child: const Text('Réessayer', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -352,21 +354,15 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
   }
 
   Widget _buildEmptyWidget() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Aucune transaction',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Vos transactions apparaîtront ici',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-          ),
+          Icon(Icons.receipt_long, size: 80, color: Color.fromARGB(255, 222, 218, 218)),
+          SizedBox(height: 16),
+          Text('Aucune transaction trouvée', style: TextStyle(fontSize: 18, color: Color.fromARGB(255, 145, 141, 141))),
+          SizedBox(height: 8),
+          Text('Vos transactions apparaîtront ici', style: TextStyle(color: Color.fromARGB(255, 156, 154, 154))),
         ],
       ),
     );
@@ -375,7 +371,8 @@ class _ClientTransactionsScreenState extends State<ClientTransactionsScreen> {
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} '
+          '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return dateString;
     }

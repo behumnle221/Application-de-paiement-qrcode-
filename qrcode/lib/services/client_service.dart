@@ -74,8 +74,8 @@ class ClientService {
 
       final body = {
         'montant': montant,
-        'operateur': operateur,
-        'telephone': telephone,
+        'operator': operateur,
+        'telephone': telephone, 
         'directPayment': directPayment,
       };
 
