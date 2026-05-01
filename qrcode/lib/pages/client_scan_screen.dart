@@ -4,6 +4,9 @@ import 'dart:convert';
 import 'package:qrcode/services/local_storage_service.dart';
 import 'package:http/http.dart' as http;
 
+// ─────────────────────────────────────────────────────────────
+// Écran principal de scan
+// ─────────────────────────────────────────────────────────────
 class ClientScanScreen extends StatefulWidget {
   const ClientScanScreen({super.key});
 
@@ -18,11 +21,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
   Map<String, dynamic>? scannedData;
   late AnimationController _animationController;
   late Animation<double> _animation;
-  bool _isLoading = false;
-
-  // URL paiement virtuel interne (débit compte virtuel du client)
-  static const String backendUrl =
-      'https://backend-qr-code-u2kx.onrender.com/api/payments/initiate';
 
   @override
   void initState() {
@@ -94,7 +92,92 @@ class _ClientScanScreenState extends State<ClientScanScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _buildPaymentSheet(),
+      builder: (context) => _PaymentSheet(
+        scannedData: scannedData!,
+        onSuccess: () {
+          // Appelé après paiement réussi : afficher le dialog de succès
+          _showSuccessDialog();
+        },
+      ),
+    );
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(32),
+        ),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF10B981),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check,
+                  size: 56,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Paiement réussi !",
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Votre transaction a été effectuée avec succès",
+              style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    scannedData = null;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2426C0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                ),
+                child: const Text(
+                  "Fermer",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -190,9 +273,8 @@ class _ClientScanScreenState extends State<ClientScanScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(
-                  0xFF1E20CD,
-                ).withOpacity(0.1 + (_animation.value * 0.2)),
+                color: const Color(0xFF1E20CD)
+                    .withOpacity(0.1 + (_animation.value * 0.2)),
                 blurRadius: 20 + (_animation.value * 10),
                 spreadRadius: 5,
               ),
@@ -431,23 +513,154 @@ class _ClientScanScreenState extends State<ClientScanScreen>
       ],
     );
   }
+}
 
-  Widget _buildPaymentSheet() {
-    if (scannedData == null) return const SizedBox();
+// ─────────────────────────────────────────────────────────────
+// Bottom sheet de confirmation de paiement — StatefulWidget autonome
+// Gère son propre _isLoading pour que setState() fonctionne correctement
+// ─────────────────────────────────────────────────────────────
+class _PaymentSheet extends StatefulWidget {
+  final Map<String, dynamic> scannedData;
+  final VoidCallback onSuccess;
 
-    final products = scannedData!['products'] as List<dynamic>;
-    final total = scannedData!['total'];
+  const _PaymentSheet({
+    required this.scannedData,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_PaymentSheet> createState() => _PaymentSheetState();
+}
+
+class _PaymentSheetState extends State<_PaymentSheet> {
+  bool _isLoading = false;
+
+  static const String backendUrl =
+      'https://backend-qr-code-u2kx.onrender.com/api/payments/virtual';
+
+  Future<void> _pay() async {
+    final total = widget.scannedData['total'];
+    final qrCodeId = widget.scannedData['qrCodeId'];
+
+    // Récupération du token JWT
+    final token = await LocalStorageService.getToken();
+
+    if (token == null || token.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Veuillez vous connecter d'abord"),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        Navigator.pop(context);
+        Navigator.pushNamed(context, '/login');
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      print("=== TEST AUTHENTIFICATION ===");
+      // Test d'abord l'authentification
+      final testResponse = await http.get(
+        Uri.parse('https://backend-qr-code-u2kx.onrender.com/api/payments/test-auth'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print("Test auth - Statut: ${testResponse.statusCode}");
+      print("Test auth - Réponse: ${testResponse.body}");
+
+      if (testResponse.statusCode != 200) {
+        throw Exception("Authentification échouée: ${testResponse.statusCode}");
+      }
+
+      // Paiement virtuel : qrCodeId + montant uniquement
+      // Le backend identifie le client via le JWT et débite son compte virtuel
+      final double montant =
+          total is String ? double.parse(total) : (total as num).toDouble();
+
+      print("=== PAIEMENT VIRTUEL ===");
+      print("Token: ${token.substring(0, 20)}...");
+      print("qrCodeId: $qrCodeId, montant: $montant");
+
+      final response = await http.post(
+        Uri.parse(backendUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'qrCodeId': qrCodeId,
+          'montant': montant,
+        }),
+      );
+
+      print("Statut réponse : ${response.statusCode}");
+      print("Réponse serveur : ${response.body}");
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final resData = json.decode(response.body);
+        if (resData['success'] == true) {
+          Navigator.pop(context); // ferme le bottom sheet
+          widget.onSuccess();    // affiche le dialog de succès
+        } else {
+          _showError(resData['message'] ?? 'Erreur serveur');
+        }
+      } else {
+        Map<String, dynamic> resData = {};
+        try {
+          resData = json.decode(response.body);
+        } catch (_) {}
+        _showError(resData['message'] ?? 'Erreur ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Erreur complète : $e");
+      if (mounted) _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Erreur : $message"),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final products = widget.scannedData['products'] as List<dynamic>;
+    final total = widget.scannedData['total'];
 
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom +
+            16,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Barre de drag
             Container(
               width: 40,
               height: 4,
@@ -457,6 +670,8 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 24),
+
+            // Icone avertissement
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -474,8 +689,9 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 20),
+
             const Text(
-              "⚠️ Confirmer le paiement",
+              "Confirmer le paiement",
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
@@ -484,7 +700,8 @@ class _ClientScanScreenState extends State<ClientScanScreen>
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
@@ -500,6 +717,8 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 24),
+
+            // Détails commande
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -515,11 +734,8 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                 children: [
                   Row(
                     children: const [
-                      Icon(
-                        Icons.receipt_long,
-                        color: Color(0xFF1E20CD),
-                        size: 24,
-                      ),
+                      Icon(Icons.receipt_long,
+                          color: Color(0xFF1E20CD), size: 24),
                       SizedBox(width: 8),
                       Text(
                         "Détails de la commande",
@@ -533,8 +749,10 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                   ),
                   const SizedBox(height: 16),
                   ...products.map((product) {
-                    final prix = double.parse(product['prix'].toString());
-                    final quantite = int.parse(product['quantite'].toString());
+                    final prix =
+                        double.parse(product['prix'].toString());
+                    final quantite =
+                        int.parse(product['quantite'].toString());
                     final sousTotal = prix * quantite;
 
                     return Container(
@@ -545,11 +763,13 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   product['nom'],
@@ -596,9 +816,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1E20CD),
                           borderRadius: BorderRadius.circular(12),
@@ -617,8 +835,9 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            // Indicateur : paiement depuis le compte virtuel
+            const SizedBox(height: 20),
+
+            // Indicateur compte virtuel
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -649,258 +868,72 @@ class _ClientScanScreenState extends State<ClientScanScreen>
             ),
             const SizedBox(height: 24),
 
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!, width: 2),
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          setState(() {
-                            scannedData = null;
-                          });
-                        },
-                        style: TextButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                        ),
-                        child: const Text(
-                          "Annuler",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1F2937),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2426C0),
-                        borderRadius: BorderRadius.circular(40),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF2426C0).withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          print("=== BOUTON PAYER CLIQUE ===");
-
-                          // Récupération du token JWT
-                          final token = await LocalStorageService.getToken();
-                          print(
-                            "Token JWT récupéré : ${token != null ? 'présent' : 'ABSENT'}",
-                          );
-
-                          if (token == null || token.isEmpty) {
-                            print("Utilisateur non connecté");
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Veuillez vous connecter d'abord",
-                                  ),
-                                  backgroundColor: Colors.orange,
-                                  duration: Duration(seconds: 4),
-                                ),
-                              );
-                              Navigator.pushNamed(context, '/login');
-                            }
-                            return;
-                          }
-
-                          setState(() => _isLoading = true);
-
-                          try {
-                            // Paiement virtuel : on envoie UNIQUEMENT qrCodeId et montant
-                            // Le backend détecte l'utilisateur via le JWT et débite son compte virtuel
-                            final response = await http.post(
-                              Uri.parse(backendUrl),
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': 'Bearer $token',
-                              },
-                              body: json.encode({
-                                'qrCodeId': scannedData!['qrCodeId'],
-                                'montant': total is String
-                                    ? double.parse(total)
-                                    : total.toDouble(),
-                              }),
-                            );
-
-                            print("Statut réponse : ${response.statusCode}");
-                            print("Réponse serveur : ${response.body}");
-
-                            if (response.statusCode == 200) {
-                              final resData = json.decode(response.body);
-                              if (resData['success'] == true) {
-                                if (mounted) {
-                                  Navigator.pop(context);
-                                  _showInitiatedDialog();
-                                }
-                              } else {
-                                throw Exception(
-                                  resData['message'] ?? 'Erreur serveur',
-                                );
-                              }
-                            } else {
-                              final resData = json.decode(response.body);
-                              throw Exception(
-                                resData['message'] ??
-                                    'Erreur ${response.statusCode}',
-                              );
-                            }
-                          } catch (e) {
-                            print("Erreur complète : $e");
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Erreur paiement : $e"),
-                                  backgroundColor: Colors.red,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isLoading = false);
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              "Payer",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+            // Boutons Annuler / Payer
+            _isLoading
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(56),
+                            side: BorderSide(
+                                color: Colors.grey[300]!, width: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(40),
                             ),
-                          ],
+                          ),
+                          child: const Text(
+                            "Annuler",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: _pay,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(56),
+                            backgroundColor: const Color(0xFF2426C0),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(40),
+                            ),
+                            elevation: 6,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.check_circle, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                "Payer",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         ),
       ),
-    );
-  }
-
-  void _showInitiatedDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32),
-            ),
-            contentPadding: const EdgeInsets.all(32),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      size: 56,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  "🎉 Paiement réussi !",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  "Votre transaction a été effectuée avec succès",
-                  style: TextStyle(fontSize: 15, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 28),
-                Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2426C0),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      setState(() {
-                        scannedData = null;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                    ),
-                    child: const Text(
-                      "Fermer",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
     );
   }
 }
