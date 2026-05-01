@@ -13,8 +13,6 @@ class ClientScanScreen extends StatefulWidget {
 
 class _ClientScanScreenState extends State<ClientScanScreen>
     with SingleTickerProviderStateMixin {
-  final _phoneController = TextEditingController();
-  String _selectedOperator = 'MTN_Cameroon';
   bool isScanning = false;
   MobileScannerController? cameraController;
   Map<String, dynamic>? scannedData;
@@ -22,7 +20,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
   late Animation<double> _animation;
   bool _isLoading = false;
 
-  // Ton URL actuelle
+  // URL paiement virtuel interne (débit compte virtuel du client)
   static const String backendUrl =
       'https://backend-qr-code-u2kx.onrender.com/api/payments/initiate';
 
@@ -40,7 +38,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
   void dispose() {
     _animationController.dispose();
     cameraController?.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -621,66 +618,34 @@ class _ClientScanScreenState extends State<ClientScanScreen>
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              "Votre numéro ",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                hintText: " :0000000",
-                prefixText: "+237 ",
-                filled: true,
-                fillColor: Colors.grey[50],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(40),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF1E20CD),
-                    width: 2,
-                  ),
+            // Indicateur : paiement depuis le compte virtuel
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF10B981).withOpacity(0.4),
+                  width: 1.5,
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "Opérateur",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: RadioListTile<String>(
-                    title: const Text(
-                      "MTN",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+              child: Row(
+                children: const [
+                  Icon(Icons.account_balance_wallet,
+                      color: Color(0xFF10B981), size: 28),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Le montant sera débité depuis votre compte virtuel",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF065F46),
+                      ),
                     ),
-                    value: 'MTN_Cameroon',
-                    groupValue: _selectedOperator,
-                    onChanged:
-                        (value) => setState(() => _selectedOperator = value!),
-                    activeColor: const Color(0xFF1E20CD),
                   ),
-                ),
-                Expanded(
-                  child: RadioListTile<String>(
-                    title: const Text(
-                      "Orange",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    value: 'Orange_Cameroon',
-                    groupValue: _selectedOperator,
-                    onChanged:
-                        (value) => setState(() => _selectedOperator = value!),
-                    activeColor: const Color(0xFF1E20CD),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -739,17 +704,6 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                         onPressed: () async {
                           print("=== BOUTON PAYER CLIQUE ===");
 
-                          final phone = _phoneController.text.trim();
-                          if (phone.isEmpty || phone.length < 9) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Numéro invalide"),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
                           // Récupération du token JWT
                           final token = await LocalStorageService.getToken();
                           print(
@@ -758,36 +712,37 @@ class _ClientScanScreenState extends State<ClientScanScreen>
 
                           if (token == null || token.isEmpty) {
                             print("Utilisateur non connecté");
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Veuillez vous connecter d'abord",
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Veuillez vous connecter d'abord",
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  duration: Duration(seconds: 4),
                                 ),
-                                backgroundColor: Colors.orange,
-                                duration: Duration(seconds: 4),
-                              ),
-                            );
-                            // Option : rediriger vers login
-                            Navigator.pushNamed(context, '/login');
+                              );
+                              Navigator.pushNamed(context, '/login');
+                            }
                             return;
                           }
 
                           setState(() => _isLoading = true);
 
                           try {
+                            // Paiement virtuel : on envoie UNIQUEMENT qrCodeId et montant
+                            // Le backend détecte l'utilisateur via le JWT et débite son compte virtuel
                             final response = await http.post(
                               Uri.parse(backendUrl),
                               headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization':
-                                    'Bearer $token', // ← LIGNE AJOUTÉE ICI
+                                'Authorization': 'Bearer $token',
                               },
                               body: json.encode({
                                 'qrCodeId': scannedData!['qrCodeId'],
-                                'telephoneClient': phone,
-                                'operator': _selectedOperator,
-                                'montant': total.toString(),
-                                'directPayment': true,
+                                'montant': total is String
+                                    ? double.parse(total)
+                                    : total.toDouble(),
                               }),
                             );
 
@@ -797,26 +752,20 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                             if (response.statusCode == 200) {
                               final resData = json.decode(response.body);
                               if (resData['success'] == true) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      resData['message'] ??
-                                          "Demande de paiement envoyée ! Vérifiez votre téléphone.",
-                                    ),
-                                    backgroundColor: Colors.green,
-                                    duration: const Duration(seconds: 8),
-                                  ),
-                                );
-                                Navigator.pop(context);
-                                _showInitiatedDialog();
+                                if (mounted) {
+                                  Navigator.pop(context);
+                                  _showInitiatedDialog();
+                                }
                               } else {
                                 throw Exception(
                                   resData['message'] ?? 'Erreur serveur',
                                 );
                               }
                             } else {
+                              final resData = json.decode(response.body);
                               throw Exception(
-                                'Erreur ${response.statusCode} – ${response.body}',
+                                resData['message'] ??
+                                    'Erreur ${response.statusCode}',
                               );
                             }
                           } catch (e) {
@@ -826,6 +775,7 @@ class _ClientScanScreenState extends State<ClientScanScreen>
                                 SnackBar(
                                   content: Text("Erreur paiement : $e"),
                                   backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 5),
                                 ),
                               );
                             }
